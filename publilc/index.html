@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino Remote Control</title>
+</head>
+<body>
+    <h1>Arduino Control</h1>
+    <button onclick="controlArduino('on')">Turn ON</button>
+    <button onclick="controlArduino('off')">Turn OFF</button>
+
+    <script>
+        function controlArduino(action) {
+            // Here, you'll send a request to your Arduino (or an intermediate cloud function) to turn it ON or OFF.
+            // We're using a placeholder for now.
+            console.log("Arduino turned", action);
+        }
+    </script>
+</body>
+</html>
