@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - SmartLocker Campus System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            width: 250px;
+            height: 100%;
+            overflow: auto;
+        }
+        .sidebar a {
+            padding: 10px 15px;
+            text-decoration: none;
+            font-size: 18px;
+            color: white;
+            display: block;
+        }
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+        .bottom-bar {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 15px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <a href="#home">Home</a>
+        <a href="#lockerStatus" onclick="loadLockerStatus()">Locker Status</a>
+        <a href="#suspiciousReports">Suspicious Report and Alerts</a>
+        <a href="#userSettings">User Settings</a>
+        <a href="#virtualKeypad" onclick="showVirtualKeypad()">Virtual Keypad Login</a>
+        <a href="#location" onclick="showLocation()">Location</a>
+        <a href="#calendar" onclick="showCalendar()">Calendar</a>
+    </div>
+    
+    <div class="main-content">
+        <div class="title-bar">
+            <h1>SmartLocker Campus System</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Welcome, <%= userType %>!</h2>
+            <p>Here is your locker status: [Locker Number 123]</p>
+        </div>
+
+        <div class="bottom-bar">
+            Contact us: +123456789 | Email: info@smartlockercampus.com <br>© 2023 SmartLocker Campus. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<script>
+  function loadLockerStatus() {
+      const channelID = 51245;
+      fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=60`)
+          .then(response => response.json())
+          .then(data => {
+              displayLockerStatus(data.feeds);
+          });
+  }
+
+  function displayLockerStatus(feeds) {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = '<h2>Locker Status</h2><select id="dataSelection" onchange="updateChartDisplay()"><option value="temperature">Temperature</option><option value="pressure">Pressure</option><option value="humidity">Humidity</option></select>';
+
+    // Prepare containers for charts
+    const canvasTemp = document.createElement('canvas');
+    canvasTemp.id = 'tempChart';
+    const canvasPressure = document.createElement('canvas');
+    canvasPressure.id = 'pressureChart';
+    const canvasHumidity = document.createElement('canvas');
+    canvasHumidity.id = 'humidityChart';
+
+    contentDiv.appendChild(canvasTemp);
+    contentDiv.appendChild(canvasPressure);
+    contentDiv.appendChild(canvasHumidity);
+
+    // Create Temperature Chart
+    new Chart(canvasTemp, {
+        type: 'line',
+        data: {
+                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Temperature',
+                    data: feeds.map(feed => feed.field1), // Assuming field1 is temperature
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                }]
+            }
+    });
+
+    // Create Pressure Chart
+    new Chart(canvasPressure, {
+        type: 'line',
+        data: {
+                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Temperature',
+                    data: feeds.map(feed => feed.field2), // Assuming field1 is temperature
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                }]
+            }
+    });
+
+    // Create Humidity Chart
+    new Chart(canvasHumidity, {
+        type: 'line',
+        data: {
+                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Temperature',
+                    data: feeds.map(feed => feed.field1), // Assuming field1 is temperature
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                }]
+            }
+    });
+
+    // Initially, hide all except temperature chart
+    canvasPressure.style.display = 'none';
+    canvasHumidity.style.display = 'none';
+}
+
+function updateChartDisplay() {
+    const selectedData = document.getElementById('dataSelection').value;
+    document.getElementById('tempChart').style.display = selectedData === 'temperature' ? 'block' : 'none';
+    document.getElementById('pressureChart').style.display = selectedData === 'pressure' ? 'block' : 'none';
+    document.getElementById('humidityChart').style.display = selectedData === 'humidity' ? 'block' : 'none';
+}
+
+function showCalendar() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = '<h2>Yearly Calendar</h2>';
+
+    let calendarHTML = '<div class="calendar">';
+
+    for (let month = 0; month < 12; month++) {
+        calendarHTML += createMonthCalendar(month);
+    }
+
+    calendarHTML += '</div>';
+    contentDiv.innerHTML += calendarHTML;
+}
+
+
+function createMonthCalendar(month) {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let date = new Date(new Date().getFullYear(), month, 1);
+    
+    let monthCalendarHTML = '<div class="month">';
+    monthCalendarHTML += `<h3>${monthNames[month]}</h3>`;
+    monthCalendarHTML += '<div class="days">';
+
+    // Days Header
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    days.forEach(day => {
+        monthCalendarHTML += `<div class="day-header">${day}</div>`;
+    });
+
+    // Padding days
+    for (let i = 0; i < date.getDay(); i++) {
+        monthCalendarHTML += '<div class="day"></div>';
+    }
+
+    // Actual days
+    while (date.getMonth() === month) {
+        monthCalendarHTML += `<div class="day">${date.getDate()}</div>`;
+        date.setDate(date.getDate() + 1);
+    }
+
+    monthCalendarHTML += '</div></div>';
+    return monthCalendarHTML;
+}
+
+function showVirtualKeypad() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = `
+        <input type="text" id="display" readonly>
+        <div id="keypad">
+          <button class="button number">1</button>
+          <button class="button number">2</button>
+          <button class="button number">3</button>
+          <button class="button number">4</button>
+          <button class="button number">5</button>
+          <button class="button number">6</button>
+          <button class="button number">7</button>
+          <button class="button number">8</button>
+          <button class="button number">9</button>
+          <button class="button number">0</button>
+          <button class="button symbol">A</button>
+          <button class="button symbol">B</button>
+          <button class="button symbol">C</button>
+          <button class="button symbol">D</button>
+          <button class="button symbol">*</button>
+          <button class="button symbol">#</button>
+        </div>
+        <button id="clearButton">Clear</button>
+    `;
+
+    document.querySelectorAll('#keypad .button').forEach(button => {
+        button.addEventListener('click', () => appendKey(button.textContent));
+    });
+
+    document.getElementById('clearButton').addEventListener('click', clearDisplay);
+}
+
+function appendKey(keyValue) {
+    const display = document.getElementById('display');
+    display.value += keyValue;
+    // Add your code here to handle the input change
+}
+
+function clearDisplay() {
+    document.getElementById('display').value = '';
+}
+
+
+function appendKey(keyValue) {
+    const display = document.getElementById('display');
+    display.value += keyValue;
+    // Add your code here to handle the input change
+}
+
+function clearDisplay() {
+    document.getElementById('display').value = '';
+}
+
+
+function appendKey(keyValue) {
+    const display = document.getElementById('display');
+    display.value += keyValue;
+    // Add your code here to handle the input change
+}
+
+function clearDisplay() {
+    document.getElementById('display').value = '';
+}
+
+function showLocation() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = `
+        <h2>Our Location</h2>
+        <div id="map" style="width:100%;height:400px;">
+            <iframe
+                width="100%"
+                height="100%"
+                frameborder="0" style="border:0"
+                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAWrJNADj1_Lhiv0Gqg4bP6XLVO7tyUp0E&q=22.3370342,114.1701451" allowfullscreen>
+            </iframe>
+        </div>
+    `;
+}
+
+
+</script>
+
+
+<style>
+  .calendar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+  }
+  .month {
+      width: 300px;
+      border: 1px solid #ccc;
+      margin: 10px;
+      padding: 10px;
+  }
+  .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+  }
+  .day, .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      border: 1px solid #eee;
+  }
+</style>
+
+

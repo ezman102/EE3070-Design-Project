@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SmartLocker Campus System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .title-bar {
+            background-color: #004a7c;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .login-form {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+        }
+        .login-form input {
+            margin-bottom: 10px;
+            padding: 10px;
+            width: calc(100% - 22px);
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        .login-form input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .login-form input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .bottom-bar {
+            background-color: #333;
+            color: #ffffff;
+            text-align: center;
+            padding: 15px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <h1>SmartLocker Campus System</h1>
+    </div>
+    <div class="login-container">
+        <form class="login-form" action="/login" method="post">
+            <input type="text" id="username" name="username" placeholder="Username"><br>
+            <input type="password" id="password" name="password" placeholder="Password"><br>
+            <input type="submit" value="Login">
+        </form>
+    </div>
+    <div class="bottom-bar">
+        Contact us: +123456789 | Email: info@smartlockercampus.com <br>© 2023 SmartLocker Campus. All rights reserved.
+    </div>
+</body>
+</html>
