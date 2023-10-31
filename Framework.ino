@@ -8,98 +8,130 @@
 #include <Adafruit_Fingerprint.h>
 
 
-#define ESP_BAUDRATE 115200
-char ssid[] = "DuckChun";
-char pass[] = "DuckDuck";
-WiFiEspClient client;
-unsigned long myChannelNumber = 2315925;
-const char * myWriteAPIKey = "B66AQC1B5H7758EU";
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-
+// Pin
+// Temperateure & Humdity
 #define DHT11_PIN 40
-dht DHT;
+// Ultrasonic
 #define trigPin 41
 #define echoPin 2 //cannot be changed
-volatile long duration;
-volatile float distance;
-volatile int d_flag;
-
-volatile unsigned long startTime;
-//volatile unsigned long endTime;
-
-volatile unsigned long PasswordTimerStart;
-volatile boolean PasswordState;
-
-volatile unsigned long FingerTimerStart;
-
-volatile unsigned long CloudTimerStart;
-//volatile unsigned long CloudTimerCur;
-
-volatile unsigned long ModuleTimerStart;
-//volatile unsigned long ModuleTimerCur;
-
-volatile unsigned long TimeCur;
-
-const int ROW_NUM = 4;
-const int COLUMN_NUM = 4;
-char keys[ROW_NUM][COLUMN_NUM] = {
-  {'1', '2', '3', 'A'},
-  {'4', '5', '6', 'B'},
-  {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
-};
-byte pin_rows[ROW_NUM] = {13, 12, 9, 8};
-byte pin_column[COLUMN_NUM] = {7, 6, 5, 4};
-Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
-
+// RFID
 #define SS_PIN 53
 #define RST_PIN 49
+// LED
 #define RED_LED_PIN 48
 #define GREEN_LED_PIN 47
 #define BLUE_LED_PIN 46
-
-MFRC522 rfid(SS_PIN, RST_PIN);
-MFRC522::MIFARE_Key key;
-String password = "";
-const String correctPassword = "12345678";
-
-byte storedUID[2][4] = {
-  {0xF1, 0x3C, 0x82, 0x19},
-  {0xBC, 0x74, 0x1A, 0x30}
-};
-
 // Motor control pins
 #define motorIN1Pin 45
 #define motorIN2Pin 44
 #define motorIN3Pin 43
 #define motorIN4Pin 42
+// Lightsensor
+#define LightsensorPin A0
+// Buzzer
+#define buzzer 38 //buzzer to arduino pwn pin
+// Fingerprint
+SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
+// Keypad
+byte pin_rows[4] = {13, 12, 9, 8};
+byte pin_column[4] = {7, 6, 5, 4};
+
+
+
+
+// Password
+// Wifi password
+char ssid[] = "DuckChun";
+char pass[] = "DuckDuck";
+// RFID password
+byte storedUID[2][4] = {
+  {0xF1, 0x3C, 0x82, 0x19},
+  {0xBC, 0x74, 0x1A, 0x30}
+};
+// Keypad password
+String password = "";
+const String correctPassword = "12345678";
+// ThinkSpeak
+unsigned long myChannelNumber = 2315925;
+const char * myWriteAPIKey = "B66AQC1B5H7758EU";
+
+
+
+
+
+//Setting
+// Ultrasonic Setting
+float uppestDistanceBound = 5; // larger than 5cm = the door opened
+float lowestDistanceBound = 2.5;// smaller than 2.5cm = sensor error
+
+// OLED Setting
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// Wifi Setting
+#define ESP_BAUDRATE 115200
+WiFiEspClient client;
+
+// DHT Setting
+dht DHT;
+
+// Buzzer Setting
+bool alarmWarning = false; //buzzer warning when the door is opened abnormaly
+
+// Keypad Setting
+volatile boolean PasswordState;
+char keys[4][4] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, 4, 4);
+char keyRead;
+
+// Motor Setting
 int mD1;
 int mD2;
 int mD3;
 int mD4;
 volatile int motorState;
-float uppestDistanceBound = 5;
-float lowestDistanceBound = 2.5;
-
-
-#define LightsensorPin A0
-#define buzzer 38 //buzzer to arduino pwn pin 12
 volatile boolean enableLock = false;
 bool door_opened = false;
-bool alarmWarning = false; //buzzer warning when the door is opened abnormaly
+
+// Light sensor Setting
 int LightValue;
-int LightWarningBound = 500;
-char keyRead;
+int LightWarningBound = 500; // Light > 500, warning
 
+// Fingerprint Setting
 volatile int finger_status = -1;
-SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
-
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+// RFID Setting
+MFRC522 rfid(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;
+
+
+
+//Variables
+// Ultrasonic distance sensor Variables
+volatile long duration;
+volatile float distance;
+volatile int d_flag;
+// Timer Variables
+volatile unsigned long startTime;
+volatile unsigned long PasswordTimerStart;
+volatile unsigned long FingerTimerStart;
+volatile unsigned long CloudTimerStart;
+volatile unsigned long ModuleTimerStart;
+volatile unsigned long TimeCur;
+
+
+
+
+
 
 
 
