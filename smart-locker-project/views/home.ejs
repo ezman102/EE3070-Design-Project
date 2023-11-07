@@ -4,55 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - SmartLocker Campus System</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
-        .sidebar {
-            background-color: #333;
-            color: white;
-            padding: 20px;
-            width: 250px;
-            height: 100%;
-            overflow: auto;
-        }
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            color: white;
-            display: block;
-        }
-        .sidebar a:hover {
-            background-color: #575757;
-        }
-        .main-content {
-            flex-grow: 1;
-            padding: 20px;
-        }
-        .bottom-bar {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 15px 20px;
-            font-size: 14px;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/keypad.css">
+    <link rel="stylesheet" href="../css/calendar.css">
+    <link rel="stylesheet" href="../css/bottom-bar.css">   
+    <link rel="stylesheet" href="../css/sidebar-main.css">   
+    <link rel="stylesheet" href="../css/table.css">   
+
 </head>
 <body>
     <div class="sidebar">
-        <a href="#home">Home</a>
+        <a href="#home" id="homeLink">Home</a>
         <a href="#lockerStatus" onclick="loadLockerStatus()">Locker Status</a>
-        <a href="#suspiciousReports">Suspicious Report and Alerts</a>
-        <a href="#userSettings">User Settings</a>
         <a href="#virtualKeypad" onclick="showVirtualKeypad()">Virtual Keypad Login</a>
+        <a href="#camera" onclick="showCamera()">Camera</a>
         <a href="#location" onclick="showLocation()">Location</a>
         <a href="#calendar" onclick="showCalendar()">Calendar</a>
+        <a href="#suspiciousReports">Suspicious Alerts</a>
+        <a href="#userSettings" onclick="showUserSettings()">User Settings</a>
+
     </div>
     
     <div class="main-content">
@@ -61,8 +30,7 @@
         </div>
         
         <div class="content">
-            <h2>Welcome, <%= userType %>!</h2>
-            <p>Here is your locker status: [Locker Number 123]</p>
+            showWelcomePage();
         </div>
 
         <div class="bottom-bar">
@@ -74,10 +42,32 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
 <script>
+    function showWelcomePage() {
+      const userType = '<%= userType %>';
+      const contentDiv = document.querySelector('.content');
+      contentDiv.innerHTML = `
+        <h2>Welcome, ${userType}!</h2>
+        <p>Here is your locker number: [ 8 8 8 ]</p>
+        <img src="../images/locker.jpg" alt="locker" style="max-width: 400px; height: 400px;">
+      `;
+    }
+    document.addEventListener('DOMContentLoaded', (event) => {
+      showWelcomePage();
+    });
+    </script>
+    
+<script>
+
+
+document.getElementById('homeLink').addEventListener('click', function() {
+  showWelcomePage();
+});
+
+
   function loadLockerStatus() {
-      const channelID = 51245;
+      const channelID = 2315925;
+      //2315925 ,51245
       fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=60`)
           .then(response => response.json())
           .then(data => {
@@ -87,47 +77,28 @@
 
   function displayLockerStatus(feeds) {
     const contentDiv = document.querySelector('.content');
-    contentDiv.innerHTML = '<h2>Locker Status</h2><select id="dataSelection" onchange="updateChartDisplay()"><option value="temperature">Temperature</option><option value="pressure">Pressure</option><option value="humidity">Humidity</option></select>';
+    contentDiv.innerHTML = '<h2>Locker Status</h2><select id="dataSelection" onchange="updateChartDisplay()"><option value="Humidity">Humidity</option><option value="Temperature">Temperature</option><option value="Light">Light</option></select>';
 
+    const chartContainerStyle = 'width:100%; max-width:1100px; height:500px; margin:auto;';
     // Prepare containers for charts
-    const canvasTemp = document.createElement('canvas');
-    canvasTemp.id = 'tempChart';
-    const canvasPressure = document.createElement('canvas');
-    canvasPressure.id = 'pressureChart';
     const canvasHumidity = document.createElement('canvas');
-    canvasHumidity.id = 'humidityChart';
+    canvasHumidity.style = chartContainerStyle;
+    canvasHumidity.id = 'HumidityChart';
 
-    contentDiv.appendChild(canvasTemp);
-    contentDiv.appendChild(canvasPressure);
+
+    const canvastemperature = document.createElement('canvas');
+    canvastemperature.style = chartContainerStyle;
+    canvastemperature.id = 'TemperatureChart';
+
+
+    const canvasLight = document.createElement('canvas');
+    canvasLight.style = chartContainerStyle;
+    canvasLight.id = 'LightChart';
+    
+
     contentDiv.appendChild(canvasHumidity);
-
-    // Create Temperature Chart
-    new Chart(canvasTemp, {
-        type: 'line',
-        data: {
-                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
-                datasets: [{
-                    label: 'Temperature',
-                    data: feeds.map(feed => feed.field1), // Assuming field1 is temperature
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                }]
-            }
-    });
-
-    // Create Pressure Chart
-    new Chart(canvasPressure, {
-        type: 'line',
-        data: {
-                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
-                datasets: [{
-                    label: 'Temperature',
-                    data: feeds.map(feed => feed.field2), // Assuming field1 is temperature
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                }]
-            }
-    });
+    contentDiv.appendChild(canvastemperature);
+    contentDiv.appendChild(canvasLight);
 
     // Create Humidity Chart
     new Chart(canvasHumidity, {
@@ -135,25 +106,63 @@
         data: {
                 labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
                 datasets: [{
+                    label: 'Humidity',
+                    data: feeds.map(feed => feed.field1), // Assuming field1 is Humidity
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                }]
+            }
+    });
+
+    // Create temperature Chart
+    new Chart(canvastemperature, {
+        type: 'line',
+        data: {
+                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
+                datasets: [{
                     label: 'Temperature',
-                    data: feeds.map(feed => feed.field1), // Assuming field1 is temperature
+                    data: feeds.map(feed => feed.field2), // Assuming field2 is temperature
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.5)',
                 }]
             }
     });
 
+    // Create Light Chart
+    new Chart(canvasLight, {
+        type: 'line',
+        data: {
+                labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
+                datasets: [{
+                    label: 'Light',
+                    data: feeds.map(feed => feed.field3), // Assuming field3 is Light
+                    borderColor: 'rgb(255, 206, 86)',
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                }]
+            }
+    });
+
     // Initially, hide all except temperature chart
-    canvasPressure.style.display = 'none';
-    canvasHumidity.style.display = 'none';
+    canvastemperature.style.display = 'none';
+    canvasLight.style.display = 'none';
 }
 
 function updateChartDisplay() {
     const selectedData = document.getElementById('dataSelection').value;
-    document.getElementById('tempChart').style.display = selectedData === 'temperature' ? 'block' : 'none';
-    document.getElementById('pressureChart').style.display = selectedData === 'pressure' ? 'block' : 'none';
-    document.getElementById('humidityChart').style.display = selectedData === 'humidity' ? 'block' : 'none';
+    document.getElementById('HumidityChart').style.display = selectedData === 'Humidity' ? 'block' : 'none';
+    document.getElementById('TemperatureChart').style.display = selectedData === 'Temperature' ? 'block' : 'none';
+    document.getElementById('LightChart').style.display = selectedData === 'Light' ? 'block' : 'none';
 }
+
+// function showCalendar() {
+//     const contentDiv = document.querySelector('.content');
+//     contentDiv.innerHTML = `
+//         <h2>Calendar</h2>
+//         <div style="width:100%; height:600px;">
+//             <iframe src="https://calendar.google.com/calendar/embed?src=c2lueXVreXVlbkBnbWFpbC5jb20&ctz=Your_Timezone" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+//         </div>
+//     `;
+// }
 
 function showCalendar() {
     const contentDiv = document.querySelector('.content');
@@ -168,7 +177,6 @@ function showCalendar() {
     calendarHTML += '</div>';
     contentDiv.innerHTML += calendarHTML;
 }
-
 
 function createMonthCalendar(month) {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -222,35 +230,60 @@ function showVirtualKeypad() {
           <button class="button symbol">#</button>
         </div>
         <button id="clearButton">Clear</button>
+        <button id="submitButton">Submit</button>
     `;
 
     document.querySelectorAll('#keypad .button').forEach(button => {
         button.addEventListener('click', () => appendKey(button.textContent));
-    });
 
+        
+    });
+    document.getElementById('submitButton').addEventListener('click', submitKeypadInput);
     document.getElementById('clearButton').addEventListener('click', clearDisplay);
 }
 
-function appendKey(keyValue) {
-    const display = document.getElementById('display');
-    display.value += keyValue;
-    // Add your code here to handle the input change
+
+function submitKeypadInput() {
+    const inputCode = document.getElementById('display').value;
+    const correctPassword = "12345678";
+    const fieldToUpdate = 5; // Assuming field 5 is the one controlling the locker
+    const apiKey = "B66AQC1B5H7758EU"; // Your ThingSpeak Write API key
+
+    // Prepare the URL for updating ThingSpeak
+    let updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}`;
+
+    // Check if the entered password is correct
+    if (inputCode === correctPassword) {
+        // If correct, set field 5 to "1"
+        updateURL += `&field${fieldToUpdate}=1`;
+    } else {
+        // If incorrect, set field 5 to "0"
+        updateURL += `&field${fieldToUpdate}=0`;
+    }
+
+    // Send the update to ThingSpeak
+    fetch(updateURL)
+        .then(response => response.text())
+        .then(data => {
+            if (data > 0) { // ThingSpeak returns the entry number if the update was successful
+                console.log('ThingSpeak update successful. Entry number: ' + data);
+                if (inputCode === correctPassword) {
+                    alert('Locker Unlocked!');
+                } else {
+                    alert('Incorrect password!');
+                }
+            } else {
+                console.log('ThingSpeak update failed.');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+
+    // Clear the display after submission
+    clearDisplay();
 }
 
-function clearDisplay() {
-    document.getElementById('display').value = '';
-}
-
-
-function appendKey(keyValue) {
-    const display = document.getElementById('display');
-    display.value += keyValue;
-    // Add your code here to handle the input change
-}
-
-function clearDisplay() {
-    document.getElementById('display').value = '';
-}
 
 
 function appendKey(keyValue) {
@@ -267,7 +300,7 @@ function showLocation() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = `
         <h2>Our Location</h2>
-        <div id="map" style="width:100%;height:400px;">
+        <div id="map" style="width:100%;height:500px;">
             <iframe
                 width="100%"
                 height="100%"
@@ -278,33 +311,105 @@ function showLocation() {
     `;
 }
 
+<!-- Inside your showCamera function in the script tag -->
+function showCamera() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = `
+        <h2>Live Camera Feed</h2>
+        <div>
+            <label for="resolution">Resolution:</label>
+            <select id="resolution" onchange="changeCameraResolution()">
+                <option value="UXGA">1600x1200</option>
+                <option value="SXGA">1280x1024</option>
+                <option value="XGA">1024x768</option>
+                <option value="SVGA">800x600</option>
+                <option value="VGA">640x480</option>
+                <option value="CIF">400x296</option>
+                <option value="QVGA">320x240</option>
+                <option value="HQVGA">240x176</option>
+                <option selected="selected" value="QQVGA">160x120</option>
+            </select>
+        </div>
+        <div id="camera-feed" style="width:100%;height:auto;">
+            <img id="camera-stream" src="http://192.168.207.233:81/stream" style="width:100%;height:auto;">
+        </div>
+    `;
+}
+
+function changeCameraResolution() {
+    const resolution = document.getElementById('resolution').value;
+}
+
+function showSuspiciousAlerts() {
+    const channelID = 2315925;
+    const apiKey = "CGTJDYPH6BL5TVIP"; // Your ThingSpeak Read API key
+    const fieldNumber = 5; // Field number for locker status
+    const results = 10; // Number of results to retrieve
+
+    let readURL = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNumber}.json?api_key=${apiKey}&results=${results}`;
+
+    fetch(readURL)
+        .then(response => response.json())
+        .then(data => {
+            buildStatusTable(data.feeds);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+function buildStatusTable(feeds) {
+    const contentDiv = document.querySelector('.content');
+    let tableHTML = '<h2>Suspicious Alerts</h2><table><tr><th>Time</th><th>Status</th></tr>';
+
+    feeds.forEach(feed => {
+        const status = feed.field5 === "1" ? 'Unlocked' : 'Locked';
+        const time = new Date(feed.created_at).toLocaleString();
+        tableHTML += `<tr><td>${time}</td><td>${status}</td></tr>`;
+    });
+
+    tableHTML += '</table>';
+    contentDiv.innerHTML = tableHTML;
+}
+
+document.querySelector('a[href="#suspiciousReports"]').addEventListener('click', showSuspiciousAlerts);
+
+
+
+function showUserSettings() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = `
+        <h2>User Settings</h2>
+        <form id="userSettingsForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username"><br><br>
+            
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email"><br><br>
+            
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password"><br><br>
+            
+            <label for="notifications">Notifications:</label>
+            <select id="notifications" name="notifications">
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+            </select><br><br>
+            
+            <input type="submit" value="Save Changes">
+        </form>
+    `;
+    document.getElementById('userSettingsForm').addEventListener('submit', saveUserSettings);
+}
+
+function saveUserSettings(event) {
+    event.preventDefault();
+    // Here you would collect the form data and send it to the server
+    // or handle it however your application needs to.
+    // This is just a placeholder for demonstration purposes.
+    alert('Settings saved!');
+}
+
+document.querySelector('a[href="#userSettings"]').addEventListener('click', showUserSettings);
 
 </script>
-
-
-<style>
-  .calendar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-around;
-  }
-  .month {
-      width: 300px;
-      border: 1px solid #ccc;
-      margin: 10px;
-      padding: 10px;
-  }
-  .days {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-  }
-  .day, .day-header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 40px;
-      border: 1px solid #eee;
-  }
-</style>
-
-
