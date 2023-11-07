@@ -1,0 +1,4 @@
+#qrcode {
+    text-align: center; /* Center the QR code in the div */
+    padding: 20px; /* Add some padding around the QR code */
+}

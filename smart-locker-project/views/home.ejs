@@ -9,18 +9,21 @@
     <link rel="stylesheet" href="../css/bottom-bar.css">   
     <link rel="stylesheet" href="../css/sidebar-main.css">   
     <link rel="stylesheet" href="../css/table.css">   
+    <link rel="stylesheet" href="../css/main.css">   
+    <link rel="stylesheet" href="../css/qrcode.css">   
 
 </head>
 <body>
     <div class="sidebar">
         <a href="#home" id="homeLink">Home</a>
-        <a href="#lockerStatus" onclick="loadLockerStatus()">Locker Status</a>
         <a href="#virtualKeypad" onclick="showVirtualKeypad()">Virtual Keypad Login</a>
-        <a href="#camera" onclick="showCamera()">Camera</a>
-        <a href="#location" onclick="showLocation()">Location</a>
-        <a href="#calendar" onclick="showCalendar()">Calendar</a>
+        <a href="#lockerStatus" onclick="loadLockerStatus()">Locker Status</a>
+        <a href="#camera" onclick="showCamera()">Live Camera</a>
+        <a href="#location" onclick="showLocation()">Locker Location</a>
+        <a href="#calendar" onclick="showCalendar()">Academic calendar</a>
         <a href="#suspiciousReports">Suspicious Alerts</a>
         <a href="#userSettings" onclick="showUserSettings()">User Settings</a>
+        <a href="#qrCode" onclick="generateQRCode()">QR Code</a>
 
     </div>
     
@@ -41,6 +44,7 @@
 </html>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 
 <script>
     function showWelcomePage() {
@@ -79,7 +83,7 @@ document.getElementById('homeLink').addEventListener('click', function() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = '<h2>Locker Status</h2><select id="dataSelection" onchange="updateChartDisplay()"><option value="Humidity">Humidity</option><option value="Temperature">Temperature</option><option value="Light">Light</option></select>';
 
-    const chartContainerStyle = 'width:100%; max-width:1100px; height:500px; margin:auto;';
+    const chartContainerStyle = 'width:100%; max-width:flex; height:500px; margin:auto;';
     // Prepare containers for charts
     const canvasHumidity = document.createElement('canvas');
     canvasHumidity.style = chartContainerStyle;
@@ -246,22 +250,17 @@ function showVirtualKeypad() {
 function submitKeypadInput() {
     const inputCode = document.getElementById('display').value;
     const correctPassword = "12345678";
-    const fieldToUpdate = 5; // Assuming field 5 is the one controlling the locker
-    const apiKey = "B66AQC1B5H7758EU"; // Your ThingSpeak Write API key
+    const fieldToUpdate = 5; 
+    const apiKey = "B66AQC1B5H7758EU"; 
 
-    // Prepare the URL for updating ThingSpeak
     let updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}`;
 
-    // Check if the entered password is correct
     if (inputCode === correctPassword) {
-        // If correct, set field 5 to "1"
         updateURL += `&field${fieldToUpdate}=1`;
     } else {
-        // If incorrect, set field 5 to "0"
         updateURL += `&field${fieldToUpdate}=0`;
     }
 
-    // Send the update to ThingSpeak
     fetch(updateURL)
         .then(response => response.text())
         .then(data => {
@@ -280,7 +279,6 @@ function submitKeypadInput() {
             console.error('Error:', error);
         });
 
-    // Clear the display after submission
     clearDisplay();
 }
 
@@ -289,7 +287,6 @@ function submitKeypadInput() {
 function appendKey(keyValue) {
     const display = document.getElementById('display');
     display.value += keyValue;
-    // Add your code here to handle the input change
 }
 
 function clearDisplay() {
@@ -364,8 +361,9 @@ function buildStatusTable(feeds) {
 
     feeds.forEach(feed => {
         const status = feed.field5 === "1" ? 'Unlocked' : 'Locked';
+        const rowClass = feed.field5 === "1" ? 'suspicious' : ''; // Add a class for styling if unlocked
         const time = new Date(feed.created_at).toLocaleString();
-        tableHTML += `<tr><td>${time}</td><td>${status}</td></tr>`;
+        tableHTML += `<tr class="${rowClass}"><td>${time}</td><td>${status}</td></tr>`;
     });
 
     tableHTML += '</table>';
@@ -374,6 +372,24 @@ function buildStatusTable(feeds) {
 
 document.querySelector('a[href="#suspiciousReports"]').addEventListener('click', showSuspiciousAlerts);
 
+function generateQRCode() {
+    const contentDiv = document.querySelector('.content');
+    const lockerNumber = '888'; // Replace with dynamic data if necessary
+    const dataForQRCode = `Locker Number: ${lockerNumber}`; // Data to encode in the QR code
+
+    // Clear the content div and add a new div to hold the QR code
+    contentDiv.innerHTML = '<h2>Scan QR Code</h2><div id="qrcode"></div>';
+
+    // Generate the QR code
+    new QRCode(document.getElementById('qrcode'), {
+        text: dataForQRCode,
+        width: 256,
+        height: 256,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+}
 
 
 function showUserSettings() {

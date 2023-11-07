@@ -1,0 +1,19 @@
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+    padding-bottom: 60px; /* Add padding at the bottom that is equal to or greater than the bottom bar's height */
+    overflow: auto; /* Ensure scrollbar appears if content is larger than the screen */
+}
+
+.bottom-bar {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 15px 20px;
+    font-size: 14px;
+    z-index: 1000; /* Ensure it's on top of other elements */
+}

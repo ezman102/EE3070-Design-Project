@@ -12,3 +12,11 @@ th {
     background-color: #f2f2f2;
     text-align: left;
 }
+.suspicious {
+    background-color: #ffcccc; /* Light red background */
+}
+
+/* Add this to your existing table styles */
+table tr.suspicious td {
+    color: #ff0000; /* Red text color */
+}
