@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="../css/table.css">   
     <link rel="stylesheet" href="../css/main.css">   
     <link rel="stylesheet" href="../css/qrcode.css">   
+    <link rel="stylesheet" href="../css/emergency.css">   
+    <link rel="stylesheet" href="../css/user-settings.css">
 
 </head>
 <body>
@@ -23,10 +25,13 @@
         <a href="#calendar" onclick="showCalendar()">Academic calendar</a>
         <a href="#suspiciousReports">Suspicious Alerts</a>
         <a href="#userSettings" onclick="showUserSettings()">User Settings</a>
-        <a href="#qrCode" onclick="generateQRCode()">QR Code</a>
-
+        <a href="#qrCode" onclick="QRCodefunction()">QR Code</a>
+        <% if (userRole === 'guard') { %>
+            <a href="#emergencyUnlock" onclick="showEmergencyUnlock()" style="color: red;">Emergency Locker Unlock</a>
+        <% } %>
     </div>
-    
+
+
     <div class="main-content">
         <div class="title-bar">
             <h1>SmartLocker Campus System</h1>
@@ -47,18 +52,34 @@
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 
 <script>
-    function showWelcomePage() {
-      const userType = '<%= userType %>';
-      const contentDiv = document.querySelector('.content');
-      contentDiv.innerHTML = `
-        <h2>Welcome, ${userType}!</h2>
-        <p>Here is your locker number: [ 8 8 8 ]</p>
-        <img src="../images/locker.jpg" alt="locker" style="max-width: 400px; height: 400px;">
-      `;
-    }
-    document.addEventListener('DOMContentLoaded', (event) => {
-      showWelcomePage();
-    });
+function showWelcomePage() {
+    const displayName = '<%= displayName %>';
+    const lockerNumber = '<%= lockerNumber %>'; // Get locker number from server
+    const contentDiv = document.querySelector('.content');
+    const greeting = getGreetingByTime();
+
+    contentDiv.innerHTML = `
+        <div class="welcome-container">
+            <h2 class="welcome-title">${greeting}, ${displayName}!</h2>
+            <p class="welcome-message">Here is your locker number: [ ${lockerNumber} ]</p>
+            <img src="../images/locker.jpg" alt="locker" class="welcome-image">
+        </div>
+    `;
+}
+
+function getGreetingByTime() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+}
+
+
+
+document.addEventListener('DOMContentLoaded', (event) => {
+    showWelcomePage();
+});
+
     </script>
     
 <script>
@@ -168,26 +189,90 @@ function updateChartDisplay() {
 //     `;
 // }
 
-function showCalendar() {
-    const contentDiv = document.querySelector('.content');
-    contentDiv.innerHTML = '<h2>Yearly Calendar</h2>';
 
-    let calendarHTML = '<div class="calendar">';
 
-    for (let month = 0; month < 12; month++) {
-        calendarHTML += createMonthCalendar(month);
+
+let selectedYear = new Date().getFullYear(); // Default to current year
+
+function initializeYearSelector() {
+    const yearSelect = document.getElementById('yearSelect');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', updateCalendarYear);
     }
-
-    calendarHTML += '</div>';
-    contentDiv.innerHTML += calendarHTML;
 }
 
-function createMonthCalendar(month) {
+function updateCalendarYear() {
+    selectedYear = parseInt(document.getElementById('yearSelect').value);
+    const calendarDiv = document.getElementById('calendarDiv');
+    if(calendarDiv) {
+        calendarDiv.innerHTML = generateCalendar(); 
+    }
+}
+
+
+
+function createYearSelector() {
+    const yearSelectorDiv = document.createElement('div');
+    yearSelectorDiv.id = 'yearSelector';
+    yearSelectorDiv.innerHTML = `
+        <label for="yearSelect">Select Year:</label>
+        <select id="yearSelect">
+            <option value="${new Date().getFullYear()}">${new Date().getFullYear()}</option>
+            <option value="${new Date().getFullYear() + 1}">${new Date().getFullYear() + 1}</option>
+        </select>
+    `;
+    const yearSelect = yearSelectorDiv.querySelector('#yearSelect');
+    yearSelect.addEventListener('change', updateCalendarYear);
+
+    return yearSelectorDiv;
+}
+
+
+function showCalendar() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = ''; // Clear existing content
+
+    // Append year selector
+    const yearSelector = createYearSelector();
+    contentDiv.appendChild(yearSelector);
+
+    // Generate and append calendar
+    const calendarDiv = document.createElement('div');
+    calendarDiv.id = 'calendarDiv';
+    calendarDiv.innerHTML = generateCalendar();
+    contentDiv.appendChild(calendarDiv);
+}
+
+
+function generateCalendar() {
+    let calendarHTML = '<div class="calendar">';
+    for (let month = 0; month < 12; month++) {
+        calendarHTML += createMonthCalendar(month, selectedYear);
+    }
+    calendarHTML += '</div>';
+    return calendarHTML;
+}
+
+
+
+
+const rentalStartDate = new Date(2023, 8, 12); // 12 September 2023
+const rentalEndDate = new Date(2024, 6, 31);   // 31 July 2024
+
+function getRentalDates(year) {
+    return {
+        start: new Date(year, 8, 12), // 12 September
+        end: new Date(year + 1, 6, 31) // 31 July of the next year
+    };
+}
+
+
+function createMonthCalendar(month, year) {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    let date = new Date(new Date().getFullYear(), month, 1);
-    
+    let date = new Date(year, month, 1);
+
     let monthCalendarHTML = '<div class="month">';
-    monthCalendarHTML += `<h3>${monthNames[month]}</h3>`;
+    monthCalendarHTML += `<h3>${monthNames[month]} ${year}</h3>`;
     monthCalendarHTML += '<div class="days">';
 
     // Days Header
@@ -203,13 +288,26 @@ function createMonthCalendar(month) {
 
     // Actual days
     while (date.getMonth() === month) {
-        monthCalendarHTML += `<div class="day">${date.getDate()}</div>`;
+        let specialDateClass = '';
+        let specialDateDescription = '';
+
+        // Check if it's the start or end of the rental period
+        if (date.getTime() === rentalStartDate.getTime()) {
+            specialDateClass = 'rental-start';
+            specialDateDescription = '<div>Rental Starts</div>';
+        } else if (date.getTime() === rentalEndDate.getTime()) {
+            specialDateClass = 'rental-end';
+            specialDateDescription = '<div>Return Locker</div>';
+        }
+
+        monthCalendarHTML += `<div class="day ${specialDateClass}">${date.getDate()}${specialDateDescription}</div>`;
         date.setDate(date.getDate() + 1);
     }
 
     monthCalendarHTML += '</div></div>';
     return monthCalendarHTML;
 }
+
 
 function showVirtualKeypad() {
     const contentDiv = document.querySelector('.content');
@@ -296,7 +394,7 @@ function clearDisplay() {
 function showLocation() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = `
-        <h2>Our Location</h2>
+        <h2>Your locker Location</h2>
         <div id="map" style="width:100%;height:500px;">
             <iframe
                 width="100%"
@@ -308,7 +406,6 @@ function showLocation() {
     `;
 }
 
-<!-- Inside your showCamera function in the script tag -->
 function showCamera() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = `
@@ -372,60 +469,217 @@ function buildStatusTable(feeds) {
 
 document.querySelector('a[href="#suspiciousReports"]').addEventListener('click', showSuspiciousAlerts);
 
-function generateQRCode() {
+
+function QRCodefunction() {
     const contentDiv = document.querySelector('.content');
-    const lockerNumber = '888'; // Replace with dynamic data if necessary
-    const dataForQRCode = `Locker Number: ${lockerNumber}`; // Data to encode in the QR code
+    contentDiv.innerHTML = '<h2>Scan QR Code</h2>';
 
-    // Clear the content div and add a new div to hold the QR code
-    contentDiv.innerHTML = '<h2>Scan QR Code</h2><div id="qrcode"></div>';
+    // Add camera feed element for scanning
+    const cameraFeed = document.createElement('video');
+    cameraFeed.id = 'qrScanner';
+    cameraFeed.style.width = '40%';
+    contentDiv.appendChild(cameraFeed);
 
-    // Generate the QR code
-    new QRCode(document.getElementById('qrcode'), {
-        text: dataForQRCode,
-        width: 256,
-        height: 256,
+    // Add a section to display the scanned QR code data
+    const scannedDataContainer = document.createElement('div');
+    scannedDataContainer.className = 'scanned-data-container';
+
+    const scannedDataTitle = document.createElement('div');
+    scannedDataTitle.className = 'scanned-data-title';
+    scannedDataTitle.textContent = 'Scanned Data:';
+
+    const scannedDataContent = document.createElement('div');
+    scannedDataContent.className = 'scanned-data-content';
+    scannedDataContent.id = 'scannedData';
+
+    scannedDataContainer.appendChild(scannedDataTitle);
+    scannedDataContainer.appendChild(scannedDataContent);
+    contentDiv.appendChild(scannedDataContainer);
+
+    // Initialize the scanner
+    let scanner = new Instascan.Scanner({ video: document.getElementById('qrScanner') });
+    scanner.addListener('scan', function (content) {
+        document.getElementById('scannedData').textContent = content;
+    });
+
+    // Start the camera and scanning
+    Instascan.Camera.getCameras().then(function (cameras) {
+        if (cameras.length > 0) {
+            scanner.start(cameras[0]);
+        } else {
+            console.error('No cameras found.');
+            alert('No cameras found.');
+        }
+    }).catch(function (e) {
+        console.error(e);
+        alert(e);
+    });
+
+    // QR Code Container
+    const qrContainer = document.createElement('div');
+    qrContainer.className = 'qr-container';
+
+    // Title
+    const qrTitle = document.createElement('h2');
+    qrTitle.className = 'qr-title';
+    qrTitle.textContent = 'Your locker QR code will appear here.';
+    qrContainer.appendChild(qrTitle);
+
+    // QR Code
+    const qrCodeDiv = document.createElement('div');
+    qrCodeDiv.id = 'qrCode';
+    qrCodeDiv.className = 'qr-code';
+    qrContainer.appendChild(qrCodeDiv);
+
+    // Description
+    const qrDescription = document.createElement('div');
+    qrDescription.className = 'qr-description';
+    qrDescription.textContent = 'Your locker information is in the QR code.';
+    qrContainer.appendChild(qrDescription);
+
+    // Append to Content Div
+    contentDiv.appendChild(qrContainer);
+
+    // Generate QR Code
+    new QRCode(document.getElementById('qrCode'), {
+        text: 'Locker Number',  // Replace with actual locker number
+        width: 128,
+        height: 128,
         colorDark: '#000000',
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
     });
+
 }
 
 
 function showUserSettings() {
     const contentDiv = document.querySelector('.content');
-    contentDiv.innerHTML = `
-        <h2>User Settings</h2>
-        <form id="userSettingsForm">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username"><br><br>
-            
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email"><br><br>
-            
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password"><br><br>
-            
-            <label for="notifications">Notifications:</label>
-            <select id="notifications" name="notifications">
-                <option value="enabled">Enabled</option>
-                <option value="disabled">Disabled</option>
-            </select><br><br>
-            
-            <input type="submit" value="Save Changes">
-        </form>
+    contentDiv.innerHTML = '';
+
+    // User Settings Container
+    const userSettingsContainer = document.createElement('div');
+    userSettingsContainer.className = 'user-settings-container';
+
+    // Title
+    const userSettingsTitle = document.createElement('h2');
+    userSettingsTitle.className = 'user-settings-title';
+    userSettingsTitle.textContent = 'User Settings (Reset Password)';
+    userSettingsContainer.appendChild(userSettingsTitle);
+
+    // Form
+    const form = document.createElement('form');
+    form.id = 'userSettingsForm';
+    form.className = 'user-settings-form';
+    form.innerHTML = `
+        <label for="userInput">Username/Email:</label>
+        <input type="text" id="userInput" name="userInput" placeholder="Enter your username or email"><br>
+        <label for="newPassword">New Password:</label>
+        <input type="password" id="newPassword" name="newPassword"><br>
+        <input type="submit" value="Update Password">
     `;
-    document.getElementById('userSettingsForm').addEventListener('submit', saveUserSettings);
+    userSettingsContainer.appendChild(form);
+
+    // Append to Content Div
+    contentDiv.appendChild(userSettingsContainer);
+
+    // Event Listener for Form Submission
+    document.getElementById('userSettingsForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        updatePassword();
+    });
 }
 
-function saveUserSettings(event) {
-    event.preventDefault();
-    // Here you would collect the form data and send it to the server
-    // or handle it however your application needs to.
-    // This is just a placeholder for demonstration purposes.
-    alert('Settings saved!');
+
+function updatePassword() {
+    const userInput = document.getElementById('userInput').value;
+    const newPassword = document.getElementById('newPassword').value;
+
+    const formData = new URLSearchParams();
+    formData.append('userInput', userInput);
+    formData.append('newPassword', newPassword);
+
+    fetch('/updatePassword', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert(data); // Display a message to the user
+    })
+    .catch(error => console.error('Error:', error));
 }
 
 document.querySelector('a[href="#userSettings"]').addEventListener('click', showUserSettings);
 
+function showEmergencyUnlock() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = '';
+
+    // Emergency Container
+    const emergencyContainer = document.createElement('div');
+    emergencyContainer.className = 'emergency-container';
+
+    // Title
+    const emergencyTitle = document.createElement('h2');
+    emergencyTitle.className = 'emergency-title';
+    emergencyTitle.textContent = 'Emergency Locker Unlock';
+    emergencyContainer.appendChild(emergencyTitle);
+
+    // Form
+    const form = document.createElement('form');
+    form.id = 'emergencyUnlockForm';
+    form.className = 'emergency-form';
+    form.innerHTML = `
+        <label for="lockerNumber">Locker Number:</label>
+        <input type="text" id="lockerNumber" name="lockerNumber"><br>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username"><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password"><br>
+        <input type="submit" value="Unlock Locker">
+    `;
+    emergencyContainer.appendChild(form);
+
+    // Append to Content Div
+    contentDiv.appendChild(emergencyContainer);
+
+    // Event Listener for Form Submission
+    document.getElementById('emergencyUnlockForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        emergencyUnlock();
+    });
+}
+
+
+function emergencyUnlock() {
+    const lockerNumber = document.getElementById('lockerNumber').value;
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    // Assuming you have an endpoint '/emergencyUnlock' to handle this request
+    const formData = new URLSearchParams();
+    formData.append('lockerNumber', lockerNumber);
+    formData.append('username', username);
+    formData.append('password', password);
+
+    fetch('/emergencyUnlock', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert(data); // Display a message to the user
+    })
+    .catch(error => console.error('Error:', error));
+}
+
 </script>
+
+<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>

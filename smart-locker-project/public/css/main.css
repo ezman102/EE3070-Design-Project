@@ -17,3 +17,27 @@
     font-size: 14px;
     z-index: 1000; /* Ensure it's on top of other elements */
 }
+
+.welcome-container {
+    text-align: center;
+    padding: 1px;
+}
+
+.welcome-title {
+    font-size: 28px;
+    color: #0056b3; /* Primary color */
+    margin-bottom: 1px;
+}
+
+.welcome-message {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.welcome-image {
+    max-width: 600px;
+    height: auto;
+    border-radius: 5px;
+
+}

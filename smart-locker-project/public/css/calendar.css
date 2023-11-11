@@ -43,3 +43,13 @@
         font-size: 0.7rem;
     }
 }
+
+.rental-start {
+    background-color: lightgreen;
+    color: black;
+}
+
+.rental-end {
+    background-color: tomato;
+    color: white;
+}
