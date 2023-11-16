@@ -1,16 +1,8 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    height: 90vh;
-    background-color: #f0f0f0;
-}
 .sidebar {
     background-color: #333;
     color: white;
     padding: 20px;
-    width: 250px;
+    width: 220px;
     height: 100%;
     overflow: auto;
 }
@@ -24,7 +16,16 @@ body {
 .sidebar a:hover {
     background-color: #575757;
 }
-.main-content {
-    flex-grow: 1;
-    padding: 20px;
+
+.logout-button {
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    color: #fff; /* Change as per your color scheme */
+    background-color: #f44336; /* Change as per your color scheme */
+    text-align: center;
+    margin-top: 20px; /* Adjust spacing */
+    border-radius: 5px; /* Optional for rounded corners */
 }
+
+

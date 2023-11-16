@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="../css/qrcode.css">   
     <link rel="stylesheet" href="../css/emergency.css">   
     <link rel="stylesheet" href="../css/user-settings.css">
-
+    <link rel="stylesheet" href="../css/camera.css">
 </head>
 <body>
     <div class="sidebar">
@@ -29,16 +29,18 @@
         <% if (userRole === 'guard') { %>
             <a href="#emergencyUnlock" onclick="showEmergencyUnlock()" style="color: red;">Emergency Locker Unlock</a>
         <% } %>
+        <a href="#" id="logoutButton" class="logout-button">Logout</a>
     </div>
-
 
     <div class="main-content">
         <div class="title-bar">
-            <h1>SmartLocker Campus System</h1>
+            <h1>SmartLocker Campus System 🔒</h1>
         </div>
+        <div class="title-bar-padding"></div>
         
         <div class="content">
             showWelcomePage();
+            
         </div>
 
         <div class="bottom-bar">
@@ -50,47 +52,30 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script src="../js/welcome.js"></script>
+<script>
+    var displayName = '<%= displayName %>';
+    var lockerNumber = '<%= lockerNumber %>';
+</script>
 
 <script>
-function showWelcomePage() {
-    const displayName = '<%= displayName %>';
-    const lockerNumber = '<%= lockerNumber %>'; // Get locker number from server
-    const contentDiv = document.querySelector('.content');
-    const greeting = getGreetingByTime();
 
-    contentDiv.innerHTML = `
-        <div class="welcome-container">
-            <h2 class="welcome-title">${greeting}, ${displayName}!</h2>
-            <p class="welcome-message">Here is your locker number: [ ${lockerNumber} ]</p>
-            <img src="../images/locker.jpg" alt="locker" class="welcome-image">
-        </div>
-    `;
-}
-
-function getGreetingByTime() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-}
-
+document.getElementById('logoutButton').addEventListener('click', function() {
+    window.location.href = '/'; 
+});
 
 
 document.addEventListener('DOMContentLoaded', (event) => {
     showWelcomePage();
 });
-
     </script>
-    
 <script>
-
 
 document.getElementById('homeLink').addEventListener('click', function() {
   showWelcomePage();
 });
 
-
-  function loadLockerStatus() {
+function loadLockerStatus() {
       const channelID = 2315925;
       //2315925 ,51245
       fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=60`)
@@ -104,23 +89,21 @@ document.getElementById('homeLink').addEventListener('click', function() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = '<h2>Locker Status</h2><select id="dataSelection" onchange="updateChartDisplay()"><option value="Humidity">Humidity</option><option value="Temperature">Temperature</option><option value="Light">Light</option></select>';
 
-    const chartContainerStyle = 'width:100%; max-width:flex; height:500px; margin:auto;';
+    const chartContainerStyle = 'width:95%; max-width:flex; height:450px; margin:auto;';
+
     // Prepare containers for charts
     const canvasHumidity = document.createElement('canvas');
     canvasHumidity.style = chartContainerStyle;
     canvasHumidity.id = 'HumidityChart';
 
-
     const canvastemperature = document.createElement('canvas');
     canvastemperature.style = chartContainerStyle;
     canvastemperature.id = 'TemperatureChart';
-
 
     const canvasLight = document.createElement('canvas');
     canvasLight.style = chartContainerStyle;
     canvasLight.id = 'LightChart';
     
-
     contentDiv.appendChild(canvasHumidity);
     contentDiv.appendChild(canvastemperature);
     contentDiv.appendChild(canvasLight);
@@ -132,7 +115,7 @@ document.getElementById('homeLink').addEventListener('click', function() {
                 labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
                 datasets: [{
                     label: 'Humidity',
-                    data: feeds.map(feed => feed.field1), // Assuming field1 is Humidity
+                    data: feeds.map(feed => feed.field1), // field1 is Humidity
                     borderColor: 'rgb(54, 162, 235)',
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
                 }]
@@ -146,7 +129,7 @@ document.getElementById('homeLink').addEventListener('click', function() {
                 labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
                 datasets: [{
                     label: 'Temperature',
-                    data: feeds.map(feed => feed.field2), // Assuming field2 is temperature
+                    data: feeds.map(feed => feed.field2), // field2 is temperature
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.5)',
                 }]
@@ -160,14 +143,14 @@ document.getElementById('homeLink').addEventListener('click', function() {
                 labels: feeds.map(feed => new Date(feed.created_at).toLocaleTimeString()),
                 datasets: [{
                     label: 'Light',
-                    data: feeds.map(feed => feed.field3), // Assuming field3 is Light
+                    data: feeds.map(feed => feed.field3), // field3 is Light
                     borderColor: 'rgb(255, 206, 86)',
                     backgroundColor: 'rgba(255, 206, 86, 0.2)',
                 }]
             }
     });
 
-    // Initially, hide all except temperature chart
+    // Initially, hide all except Humidity chart
     canvastemperature.style.display = 'none';
     canvasLight.style.display = 'none';
 }
@@ -179,19 +162,7 @@ function updateChartDisplay() {
     document.getElementById('LightChart').style.display = selectedData === 'Light' ? 'block' : 'none';
 }
 
-// function showCalendar() {
-//     const contentDiv = document.querySelector('.content');
-//     contentDiv.innerHTML = `
-//         <h2>Calendar</h2>
-//         <div style="width:100%; height:600px;">
-//             <iframe src="https://calendar.google.com/calendar/embed?src=c2lueXVreXVlbkBnbWFpbC5jb20&ctz=Your_Timezone" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
-//         </div>
-//     `;
-// }
-
-
-
-
+//calendar
 let selectedYear = new Date().getFullYear(); // Default to current year
 
 function initializeYearSelector() {
@@ -209,8 +180,6 @@ function updateCalendarYear() {
     }
 }
 
-
-
 function createYearSelector() {
     const yearSelectorDiv = document.createElement('div');
     yearSelectorDiv.id = 'yearSelector';
@@ -227,10 +196,9 @@ function createYearSelector() {
     return yearSelectorDiv;
 }
 
-
 function showCalendar() {
     const contentDiv = document.querySelector('.content');
-    contentDiv.innerHTML = ''; // Clear existing content
+    contentDiv.innerHTML = ''; 
 
     // Append year selector
     const yearSelector = createYearSelector();
@@ -241,8 +209,13 @@ function showCalendar() {
     calendarDiv.id = 'calendarDiv';
     calendarDiv.innerHTML = generateCalendar();
     contentDiv.appendChild(calendarDiv);
-}
 
+    // Show the reminder alert after the calendar is loaded
+    setTimeout(function() {
+        alert('Kindly reminder: Please remember to return and clear your locker before the end of your rental period.');
+    }, 250); 
+
+}
 
 function generateCalendar() {
     let calendarHTML = '<div class="calendar">';
@@ -253,9 +226,6 @@ function generateCalendar() {
     return calendarHTML;
 }
 
-
-
-
 const rentalStartDate = new Date(2023, 8, 12); // 12 September 2023
 const rentalEndDate = new Date(2024, 6, 31);   // 31 July 2024
 
@@ -265,7 +235,6 @@ function getRentalDates(year) {
         end: new Date(year + 1, 6, 31) // 31 July of the next year
     };
 }
-
 
 function createMonthCalendar(month, year) {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -348,37 +317,40 @@ function showVirtualKeypad() {
 function submitKeypadInput() {
     const inputCode = document.getElementById('display').value;
     const correctPassword = "12345678";
-    const fieldToUpdate = 5; 
+    const fieldToUpdate = 6; 
     const apiKey = "B66AQC1B5H7758EU"; 
 
-    let updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}`;
+    function updateField(value) {
+        const updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}&field${fieldToUpdate}=${value}`;
 
-    if (inputCode === correctPassword) {
-        updateURL += `&field${fieldToUpdate}=1`;
-    } else {
-        updateURL += `&field${fieldToUpdate}=0`;
+        fetch(updateURL)
+            .then(response => response.text())
+            .then(data => {
+                if (data > 0) {
+                    console.log('ThingSpeak update successful. Entry number: ' + data);
+                } else {
+                    console.log('ThingSpeak update failed.');
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     }
 
-    fetch(updateURL)
-        .then(response => response.text())
-        .then(data => {
-            if (data > 0) { // ThingSpeak returns the entry number if the update was successful
-                console.log('ThingSpeak update successful. Entry number: ' + data);
-                if (inputCode === correctPassword) {
-                    alert('Locker Unlocked!');
-                } else {
-                    alert('Incorrect password!');
-                }
-            } else {
-                console.log('ThingSpeak update failed.');
-            }
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+    if (inputCode === correctPassword) {
+        updateField(1);
+        alert('Locker Unlocked!');
+        // setTimeout(() => {
+        //     updateField(0); // Reset the field to 0 after 15 seconds
+        // }, 15000);
+    } else {
+        updateField(0);
+        alert('Incorrect password!');
+    }
 
     clearDisplay();
 }
+
 
 
 
@@ -424,48 +396,117 @@ function showCamera() {
                 <option selected="selected" value="QQVGA">160x120</option>
             </select>
         </div>
-        <div id="camera-feed" style="width:100%;height:auto;">
-            <img id="camera-stream" src="http://192.168.207.233:81/stream" style="width:100%;height:auto;">
+        <div id="camera-feed" style="width:auto;height:auto;">
+            <img id="camera-stream" src="http://192.168.0.180:81/stream" style="width:auto;height:auto">
         </div>
     `;
 }
 
 function changeCameraResolution() {
     const resolution = document.getElementById('resolution').value;
+    const cameraStream = document.getElementById('camera-stream');
+
+    switch (resolution) {
+        case 'UXGA':
+            cameraStream.style.width = '1600px';
+            cameraStream.style.height = '1200px';
+            break;
+        case 'SXGA':
+            cameraStream.style.width = '1280px';
+            cameraStream.style.height = '1024px';
+            break;
+        case 'XGA':
+            cameraStream.style.width = '1024px';
+            cameraStream.style.height = '768px';
+            break;
+        case 'SVGA':
+            cameraStream.style.width = '800px';
+            cameraStream.style.height = '600px';
+            break;
+        case 'VGA':
+            cameraStream.style.width = '640px';
+            cameraStream.style.height = '480px';
+            break;
+        case 'CIF':
+            cameraStream.style.width = '400px';
+            cameraStream.style.height = '296px';
+            break;
+        case 'QVGA':
+            cameraStream.style.width = '320px';
+            cameraStream.style.height = '240px';
+            break;
+        case 'HQVGA':
+            cameraStream.style.width = '240px';
+            cameraStream.style.height = '176px';
+            break;
+        case 'QQVGA':
+            cameraStream.style.width = '160px';
+            cameraStream.style.height = '120px';
+            break;
+        default:
+            cameraStream.style.width = '100%'; // Default to full width if resolution not found
+            cameraStream.style.height = 'auto';
+    }
 }
+
 
 function showSuspiciousAlerts() {
     const channelID = 2315925;
     const apiKey = "CGTJDYPH6BL5TVIP"; // Your ThingSpeak Read API key
-    const fieldNumber = 5; // Field number for locker status
+    const fieldNumberLocal = 5; // Field number for local unlock status
+    const fieldNumberOnline = 6; // Field number for online unlock status
     const results = 10; // Number of results to retrieve
 
-    let readURL = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNumber}.json?api_key=${apiKey}&results=${results}`;
+    let readURL = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNumberLocal}.json?api_key=${apiKey}&results=${results}`;
+    let readURL2 = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNumberOnline}.json?api_key=${apiKey}&results=${results}`;
 
-    fetch(readURL)
-        .then(response => response.json())
-        .then(data => {
-            buildStatusTable(data.feeds);
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+    Promise.all([
+        fetch(readURL).then(response => response.json()),
+        fetch(readURL2).then(response => response.json())
+    ])
+    .then(([dataLocal, dataOnline]) => {
+        let combinedFeeds = dataLocal.feeds.map((feed, index) => {
+            return {
+                ...feed,
+                field6: dataOnline.feeds[index].field6
+            };
         });
+        buildStatusTable(combinedFeeds);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
 }
+
 
 function buildStatusTable(feeds) {
     const contentDiv = document.querySelector('.content');
-    let tableHTML = '<h2>Suspicious Alerts</h2><table><tr><th>Time</th><th>Status</th></tr>';
+    let tableHTML = '<h2>Suspicious Alerts</h2><table><tr><th>Time</th><th>Unlock Status</th></tr>';
 
     feeds.forEach(feed => {
-        const status = feed.field5 === "1" ? 'Unlocked' : 'Locked';
-        const rowClass = feed.field5 === "1" ? 'suspicious' : ''; // Add a class for styling if unlocked
+        let status = 'Locked';
+
+        if (feed.field6 === "1") {
+            // If unlocked online, prioritize this status
+            status = 'Unlocked (Online)';
+        } else if (feed.field5 === "1") {
+            // If not unlocked online, but unlocked locally
+            status = 'Unlocked (Local)';
+        }
+
+        // Row class for styling if unlocked
+        const rowClass = (feed.field5 === "1" || feed.field6 === "1") ? 'suspicious' : '';
         const time = new Date(feed.created_at).toLocaleString();
+        
         tableHTML += `<tr class="${rowClass}"><td>${time}</td><td>${status}</td></tr>`;
     });
 
     tableHTML += '</table>';
     contentDiv.innerHTML = tableHTML;
 }
+
+
+
 
 document.querySelector('a[href="#suspiciousReports"]').addEventListener('click', showSuspiciousAlerts);
 
@@ -477,43 +518,70 @@ function QRCodefunction() {
     // Add camera feed element for scanning
     const cameraFeed = document.createElement('video');
     cameraFeed.id = 'qrScanner';
-    cameraFeed.style.width = '40%';
+    cameraFeed.style.width = '80%';
     contentDiv.appendChild(cameraFeed);
 
     // Add a section to display the scanned QR code data
     const scannedDataContainer = document.createElement('div');
     scannedDataContainer.className = 'scanned-data-container';
-
     const scannedDataTitle = document.createElement('div');
     scannedDataTitle.className = 'scanned-data-title';
     scannedDataTitle.textContent = 'Scanned Data:';
-
     const scannedDataContent = document.createElement('div');
     scannedDataContent.className = 'scanned-data-content';
     scannedDataContent.id = 'scannedData';
-
     scannedDataContainer.appendChild(scannedDataTitle);
     scannedDataContainer.appendChild(scannedDataContent);
     contentDiv.appendChild(scannedDataContainer);
 
     // Initialize the scanner
+    const cameraSelect = document.createElement('select');
+    cameraSelect.id = 'cameraSelect';
+    contentDiv.appendChild(cameraSelect);
+
     let scanner = new Instascan.Scanner({ video: document.getElementById('qrScanner') });
     scanner.addListener('scan', function (content) {
         document.getElementById('scannedData').textContent = content;
     });
 
-    // Start the camera and scanning
     Instascan.Camera.getCameras().then(function (cameras) {
+        cameras.forEach((camera, i) => {
+            const opt = document.createElement('option');
+            opt.value = camera.id; // Use camera id for value
+            opt.innerHTML = camera.name || `Camera ${i + 1}`;
+            cameraSelect.appendChild(opt);
+        });
+
         if (cameras.length > 0) {
-            scanner.start(cameras[0]);
+            scanner.start(cameras[0]); // Start the first camera by default
         } else {
             console.error('No cameras found.');
             alert('No cameras found.');
         }
+
+        // Handle camera change
+        cameraSelect.addEventListener('change', function () {
+            scanner.stop(); // Stop the current camera
+            const selectedCamera = cameras.find(c => c.id === this.value);
+            if (selectedCamera) {
+                scanner.start(selectedCamera);
+            }
+        });
     }).catch(function (e) {
         console.error(e);
         alert(e);
     });
+
+        // Handle camera change
+        cameraSelect.addEventListener('change', function () {
+        if (currentCamera) {
+            scanner.stop(currentCamera);
+        }
+        const cameraIndex = parseInt(this.value, 10);
+        currentCamera = cameras[cameraIndex];
+        scanner.start(currentCamera);
+    });
+
 
     // QR Code Container
     const qrContainer = document.createElement('div');
@@ -655,30 +723,86 @@ function showEmergencyUnlock() {
 }
 
 
+function showEmergencyUnlock() {
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = '';
+
+    // Emergency Container
+    const emergencyContainer = document.createElement('div');
+    emergencyContainer.className = 'emergency-container';
+
+    // Title
+    const emergencyTitle = document.createElement('h2');
+    emergencyTitle.className = 'emergency-title';
+    emergencyTitle.textContent = 'Emergency Locker Unlock';
+    emergencyContainer.appendChild(emergencyTitle);
+
+    // Description
+    const emergencyDescription = document.createElement('p');
+    emergencyDescription.className = 'emergency-description';
+    emergencyDescription.textContent = 'This section is dedicated for emergency use by security personnel. It allows for immediate unlocking of lockers in urgent situations, such as safety concerns or when access is required by law enforcement. Please use this function responsibly and only in legitimate emergencies.';
+    emergencyContainer.appendChild(emergencyDescription);
+
+    // Form
+    const form = document.createElement('form');
+    form.id = 'emergencyUnlockForm';
+    form.className = 'emergency-form';
+    form.innerHTML = `
+        <label for="lockerNumber">Locker Number:</label>
+        <input type="text" id="lockerNumber" name="lockerNumber"><br>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username"><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password"><br>
+        <input type="submit" value="Unlock Locker">
+    `;
+    emergencyContainer.appendChild(form);
+
+    // Append to Content Div
+    contentDiv.appendChild(emergencyContainer);
+
+    // Event Listener for Form Submission
+    document.getElementById('emergencyUnlockForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        emergencyUnlock();
+    });
+}
+
 function emergencyUnlock() {
     const lockerNumber = document.getElementById('lockerNumber').value;
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    // Assuming you have an endpoint '/emergencyUnlock' to handle this request
-    const formData = new URLSearchParams();
-    formData.append('lockerNumber', lockerNumber);
-    formData.append('username', username);
-    formData.append('password', password);
+    // Assuming you have validation or other processes here
 
-    fetch('/emergencyUnlock', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData
-    })
-    .then(response => response.text())
-    .then(data => {
-        alert(data); // Display a message to the user
-    })
-    .catch(error => console.error('Error:', error));
+    // Update field 6 on ThingSpeak
+    updateField(1); // Set field 6 to 1 for unlocking
+
 }
+
+function updateField(value) {
+    const apiKey = "B66AQC1B5H7758EU"; // Use your ThingSpeak Write API key
+    const fieldToUpdate = 6; // Field 6 for emergency unlock
+
+    const updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}&field${fieldToUpdate}=${value}`;
+
+    fetch(updateURL)
+        .then(response => response.text())
+        .then(data => {
+            if (data > 0) {
+                console.log('ThingSpeak update successful. Entry number: ' + data);
+                alert('Emergency Unlock Successful!');
+            } else {
+                console.log('ThingSpeak update failed.');
+                alert('Emergency Unlock Failed!');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('Error in Emergency Unlock!');
+        });
+}
+
 
 </script>
 

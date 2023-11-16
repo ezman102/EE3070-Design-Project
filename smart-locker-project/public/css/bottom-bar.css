@@ -7,8 +7,6 @@
     color: white;
     text-align: center;
     z-index: 1000; 
-    padding: 10px 0; 
-    padding: 15px 20px;
+    padding: 15px 20px; /* Adjust padding as needed */
     font-size: 14px;
 }
-
