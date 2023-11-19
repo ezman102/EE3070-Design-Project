@@ -25,7 +25,7 @@
         <a href="#calendar" onclick="showCalendar()">Academic calendar</a>
         <a href="#suspiciousReports">Suspicious Alerts</a>
         <a href="#userSettings" onclick="showUserSettings()">User Settings</a>
-        <a href="#qrCode" onclick="QRCodefunction()">QR Code</a>
+        <a href="#qrCode" onclick="QRCodefunction()">QR Code Function</a>
         <% if (userRole === 'guard') { %>
             <a href="#emergencyUnlock" onclick="showEmergencyUnlock()" style="color: red;">Emergency Locker Unlock</a>
         <% } %>
@@ -53,24 +53,24 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 <script src="../js/welcome.js"></script>
+<script src="../js/email.js"></script>
+
+
 <script>
     var displayName = '<%= displayName %>';
     var lockerNumber = '<%= lockerNumber %>';
 </script>
 
 <script>
-
 document.getElementById('logoutButton').addEventListener('click', function() {
     window.location.href = '/'; 
 });
-
-
 document.addEventListener('DOMContentLoaded', (event) => {
     showWelcomePage();
 });
-    </script>
-<script>
+</script>
 
+<script>
 document.getElementById('homeLink').addEventListener('click', function() {
   showWelcomePage();
 });
@@ -625,17 +625,14 @@ function showUserSettings() {
     const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = '';
 
-    // User Settings Container
     const userSettingsContainer = document.createElement('div');
     userSettingsContainer.className = 'user-settings-container';
 
-    // Title
     const userSettingsTitle = document.createElement('h2');
     userSettingsTitle.className = 'user-settings-title';
     userSettingsTitle.textContent = 'User Settings (Reset Password)';
     userSettingsContainer.appendChild(userSettingsTitle);
 
-    // Form
     const form = document.createElement('form');
     form.id = 'userSettingsForm';
     form.className = 'user-settings-form';
@@ -773,11 +770,20 @@ function emergencyUnlock() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    // Assuming you have validation or other processes here
-
     // Update field 6 on ThingSpeak
     updateField(1); // Set field 6 to 1 for unlocking
-
+    fetch('/sendEmail', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lockerNumber, username })
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert(data); // "Email sent successfully" or error message
+    })
+    .catch(error => console.error('Error:', error));
 }
 
 function updateField(value) {
@@ -802,7 +808,6 @@ function updateField(value) {
             alert('Error in Emergency Unlock!');
         });
 }
-
 
 </script>
 

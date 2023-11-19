@@ -10,8 +10,6 @@ function showWelcomePage() {
             <img src="../images/locker.jpg" alt="locker" class="welcome-image">
         </div>
     `;
-
-
 }
 
 function getGreetingByTime() {
