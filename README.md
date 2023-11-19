@@ -52,6 +52,3 @@ For any queries or suggestions, feel free to contact us at `info@smartlockercamp
 ## Acknowledgments
 - Special thanks to the contributors who have helped in building and refining this system.
 - Thankful for the open-source community for the various tools and libraries used in this project.
-```
-
-Remember, this is a basic template. You should modify it to accurately reflect the specifics of your project, its setup, and usage instructions. Also, make sure to include any additional sections that might be relevant to your project, such as a 'Frequently Asked Questions' section or detailed hardware setup instructions, if necessary.
