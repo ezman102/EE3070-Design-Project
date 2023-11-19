@@ -7,6 +7,9 @@
 #include <Keypad.h>
 #include <Adafruit_Fingerprint.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
+#include <avr/wdt.h>
+
 
 // Pin
 // Temperateure & Humdity
@@ -34,12 +37,12 @@
 SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
 // Keypad
 byte pin_rows[4] = {13, 12, 9, 8};
-byte pin_column[4] = {7, 6, 5, 3};
+byte pin_column[4] = {7, 6, 5, 4};
 
 // Password
 // Wifi password
-char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1
-char pass[] = "EE3070P1615";     //EE3070P1615
+char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1  TP-Link_002C
+char pass[] = "EE3070P1615";     //EE3070P1615  20678203
 // RFID password
 byte storedUID[2][4] = {
   {0xF1, 0x3C, 0x82, 0x19},
@@ -124,7 +127,8 @@ const unsigned long CloudReadPeriod = 15000;
 const unsigned long KeypadTimeoutPeriod = 10000;
 const unsigned long LedScreenUpdatePeriod = 2000;
 const unsigned long DoorClosePeriod = 200;
-
+const unsigned long SleepPeriod = 20;
+const unsigned long SleepEnablePeriod = 200;
 //Variables
 // Ultrasonic distance sensor Variables
 volatile long duration;
@@ -144,10 +148,11 @@ volatile unsigned long UltrasonicStart;
 int autolock_count = 0;
 int upload_count = 0;
 int sleep_count = 0;
+int sleep_waitCount = 0;
 volatile int toneCycle_count = 0;
 // Timer Variables
 volatile bool enableTimer1ISR;
-
+volatile bool enableSleep;
 
 void setup() {
   Serial.begin(115200);
@@ -219,8 +224,11 @@ void setup() {
   TCCR1B |= (1 << WGM12);           // Enable CTC mode
   TCCR1B |= (1 << CS12) | (1 << CS10);  // Set prescaler to 1024
   TIMSK1 |= (1 << OCIE1A);          // Enable compare match interrupt
-  sei();                            // Enable interrupts
   enableTimer1ISR = false;           // Disable timer1 interrupt
+  // Setup sleep mode
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);  // Set sleep mode to power-down
+  enableSleep = false;
+  sei();                            // Enable interrupts
 }
 
 
@@ -231,6 +239,7 @@ void loop() {
     CheckKeypad();
     CheckFingerprint();
     CheckCloud();
+    sleep_count ++;
   }
   ultrasonicSensor();
   display_and_upload();
@@ -247,6 +256,20 @@ void loop() {
     door_hasOpened = 1;
   }
   alarmsystem();
+
+  if (enableSleep) {
+    if (sleep_count < SleepEnablePeriod)
+      enableSleep = false;
+    else if (sleep_waitCount > SleepPeriod) {
+      enterSleepMode();
+      sleep_waitCount = 0;
+    }
+    else sleep_waitCount ++;
+  } else if (sleep_count >= SleepEnablePeriod) {
+    enableSleep = true;
+    sleep_waitCount = 0;
+  } else  enableSleep = false;
+
   delay(50);
 }
 
@@ -269,9 +292,11 @@ void CheckFingerprint() {
     if (finger_status != -1 and finger_status != -2) {
       displayMessage("Correct ID!");
       password = "";  // Reset the password string
+      sleep_count = 0; // Reset sleep
       doorOpen();
     } else {
       if (finger_status == -2) {
+        sleep_count = 0; // Reset sleep
         toneCycle_count = 1; // set Buzzer & LED run once
         tone_cur = tone_wrong; // set Buzzer & LED properties
         enableBuzzer(); // start Buzzer & LED
@@ -360,6 +385,7 @@ void CheckRFID() {
   if (door_opened)
     return;
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    sleep_count = 0; // Reset sleep
     if (isUIDMatch(rfid.uid.uidByte, storedUID, sizeof(storedUID) / sizeof(storedUID[0]))) {
       Serial.println("Correct Card!");
       displayMessage("Correct Card!");
@@ -503,8 +529,10 @@ void doorClose() {
   Serial.print("Upload Result: ");
   Serial.println(result);  // Print result for debugging
   TimerReset();
+  sleep_count = 0;
 }
 void doorOpen() {
+  sleep_count = 0; // Reset sleep
   password = "";  // Reset the password string
   masked_password = "";
   PasswordState = false;
@@ -670,6 +698,15 @@ void disableBuzzer() {
 
   TIMSK1 &= ~(1 << OCIE1A);         // Disable timer interrupt
 }
+//
+//void enterSleepMode() {
+//  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+//  sleep_enable();
+//  // enter sleep
+//  sleep_mode();
+//  // wake up
+//  sleep_disable();
+//}
 
 // Timer1 ISR
 ISR(TIMER1_COMPA_vect) {
@@ -702,4 +739,26 @@ ISR(TIMER1_COMPA_vect) {
     if (toneCycle_count < 0)
       disableBuzzer();
   }
+}
+
+ISR(WDT_vect)
+{
+  Serial.println(".");
+}
+
+void enterSleepMode()
+{
+  Serial.println("sleep");
+  // Configure the watchdog timer
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+   MCUSR &= ~(1 << WDRF);  // Clear the Watchdog System Reset Flag
+  WDTCSR |= (1 << WDCE) | (1 << WDE);  // Enable Watchdog Timer Configuration
+  WDTCSR = (1 << WDP2) | (1 << WDP1) | (1 << WDP0);  // Set Watchdog Timer Prescaler to 4 seconds
+  WDTCSR |= _BV(WDIE); 
+  delay(1);
+  // Enter power-down sleep mode
+  sleep_mode();
+  delay(1);
+  wdt_disable();
+  Serial.println("wake up");
 }
