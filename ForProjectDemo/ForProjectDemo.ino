@@ -7,7 +7,6 @@
 #include <Keypad.h>
 #include <Adafruit_Fingerprint.h>
 
-
 #define ESP_BAUDRATE 115200
 char ssid[] = "TP-Link_002C";
 char pass[] = "20678203";
