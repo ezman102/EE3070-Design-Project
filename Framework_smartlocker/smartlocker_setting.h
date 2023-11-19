@@ -1,7 +1,7 @@
 // Password
 // Wifi password
-char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1
-char pass[] = "EE3070P1615";     //EE3070P1615
+char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1  TP-Link_002C
+char pass[] = "EE3070P1615";     //EE3070P1615  20678203
 // RFID password
 byte storedUID[2][4] = {
   {0xF1, 0x3C, 0x82, 0x19},
@@ -86,7 +86,8 @@ const unsigned long CloudReadPeriod = 15000;
 const unsigned long KeypadTimeoutPeriod = 10000;
 const unsigned long LedScreenUpdatePeriod = 2000;
 const unsigned long DoorClosePeriod = 200;
-
+const unsigned long SleepPeriod = 20;
+const unsigned long SleepEnablePeriod = 200;
 //Variables
 // Ultrasonic distance sensor Variables
 volatile long duration;
@@ -106,6 +107,8 @@ volatile unsigned long UltrasonicStart;
 int autolock_count = 0;
 int upload_count = 0;
 int sleep_count = 0;
+int sleep_waitCount = 0;
 volatile int toneCycle_count = 0;
 // Timer Variables
 volatile bool enableTimer1ISR;
+volatile bool enableSleep;
