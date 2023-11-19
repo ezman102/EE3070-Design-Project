@@ -6,131 +6,179 @@
 #include <WiFiEsp.h>
 #include <Keypad.h>
 #include <Adafruit_Fingerprint.h>
+#include <avr/interrupt.h>
 
-#define ESP_BAUDRATE 115200
-char ssid[] = "TP-Link_002C";
-char pass[] = "20678203";
-WiFiEspClient client;
-unsigned long myChannelNumber = 2315925;
-const char * myWriteAPIKey = "B66AQC1B5H7758EU";
-
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-
+// Pin
+// Temperateure & Humdity
 #define DHT11_PIN 40
-dht DHT;
+// Ultrasonic
 #define trigPin 41
 #define echoPin 2 //cannot be changed
-volatile long duration;
-volatile float distance;
-volatile int d_flag;
-
-volatile unsigned long startTime;
-//volatile unsigned long endTime;
-
-volatile unsigned long PasswordTimerStart;
-volatile boolean PasswordState;
-
-volatile unsigned long FingerTimerStart;
-
-volatile unsigned long CloudTimerStart;
-//volatile unsigned long CloudTimerCur;
-
-volatile unsigned long ModuleTimerStart;
-//volatile unsigned long ModuleTimerCur;
-
-volatile unsigned long TimeCur;
-
-const int ROW_NUM = 4;
-const int COLUMN_NUM = 4;
-char keys[ROW_NUM][COLUMN_NUM] = {
-  {'1', '2', '3', 'A'},
-  {'4', '5', '6', 'B'},
-  {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
-};
-byte pin_rows[ROW_NUM] = {13, 12, 9, 8};
-byte pin_column[COLUMN_NUM] = {7, 6, 5, 4};
-Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM);
-
+// RFID
 #define SS_PIN 53
 #define RST_PIN 49
+// LED
 #define RED_LED_PIN 48
 #define GREEN_LED_PIN 47
 #define BLUE_LED_PIN 46
-
-MFRC522 rfid(SS_PIN, RST_PIN);
-MFRC522::MIFARE_Key key;
-String password = "";
-const String correctPassword = "12345678";
-
-byte storedUID[2][4] = {
-  {0xF1, 0x3C, 0x82, 0x19},
-  {0xBC, 0x74, 0x1A, 0x30}
-};
-
 // Motor control pins
 #define motorIN1Pin 45
 #define motorIN2Pin 44
 #define motorIN3Pin 43
 #define motorIN4Pin 42
+// Lightsensor
+#define LightsensorPin A0
+// Buzzer
+#define buzzer 38 //buzzer to arduino pwn pin
+// Fingerprint
+SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
+// Keypad
+byte pin_rows[4] = {13, 12, 9, 8};
+byte pin_column[4] = {7, 6, 5, 3};
+
+// Password
+// Wifi password
+char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1
+char pass[] = "EE3070P1615";     //EE3070P1615
+// RFID password
+byte storedUID[2][4] = {
+  {0xF1, 0x3C, 0x82, 0x19},
+  {0xBC, 0x74, 0x1A, 0x30}
+};
+// Keypad password
+String password = "";
+const String correctPassword = "12345678";
+String masked_password = "";
+// ThinkSpeak
+unsigned long myChannelNumber = 2315925;
+const char * myWriteAPIKey = "B66AQC1B5H7758EU";
+const char * myReadAPIKey = "CGTJDYPH6BL5TVIP";
+int statusCode = 0;
+int uploadDebug = false;
+
+
+
+//Setting
+// Ultrasonic Setting
+float uppestDistanceBound = 5; // larger than 5cm = the door opened
+float lowestDistanceBound = 2.5;// smaller than 2.5cm = sensor error
+
+// OLED Setting
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// Wifi Setting
+#define ESP_BAUDRATE 115200
+WiFiEspClient client;
+
+// DHT Setting
+dht DHT;
+
+// Buzzer Setting
+bool alarmWarning = false; //buzzer warning when the door is opened abnormaly
+const int tone_correct = 2000;
+const int tone_wrong = 150;
+volatile int tone_cur;
+volatile int tone_type = 2500;
+
+// Keypad Setting
+volatile boolean PasswordState;
+char keys[4][4] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, 4, 4);
+char keyRead;
+
+// Motor Setting
 int mD1;
 int mD2;
 int mD3;
 int mD4;
-volatile int motorState;
-float uppestDistanceBound = 4;
-float lowestDistanceBound = 2.5;
+volatile int motorState; //1: motor is running 2:Open state 0:Close state
+boolean enableLock = false;
+boolean door_hasOpened = false;
+int door_opened = 0;
 
-
-#define LightsensorPin A0
-#define buzzer 38 //buzzer to arduino pwn pin 12
-volatile boolean enableLock = false;
-bool door_opened = false;
-bool alarmWarning = false; //buzzer warning when the door is opened abnormaly
+// Light sensor Setting
 int LightValue;
-int LightWarningBound = 500;
-char keyRead;
+int LightWarningBound = 500; // Light > 500, warning
 
+// Fingerprint Setting
 volatile int finger_status = -1;
-SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
-
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
+// RFID Setting
+MFRC522 rfid(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;
+
+// Waiting Period Setting
+const unsigned long UltrasonicCheckPeriod = 500;
+const unsigned long FingerCheckPeriod = 500;
+const unsigned long CloudWritePeriod = 100000;
+const unsigned long CloudReadPeriod = 15000;
+const unsigned long KeypadTimeoutPeriod = 10000;
+const unsigned long LedScreenUpdatePeriod = 2000;
+const unsigned long DoorClosePeriod = 200;
+
+//Variables
+// Ultrasonic distance sensor Variables
+volatile long duration;
+volatile float distance;
+volatile int d_flag;
+// RunTime Variables
+volatile unsigned long startTime;
+volatile unsigned long PasswordTimerStart;
+volatile unsigned long FingerTimerStart;
+volatile unsigned long CloudTimerStart;
+volatile unsigned long ModuleTimerStart;
+volatile unsigned long TimeCur;
+volatile unsigned long ReadCloudStart;
+volatile unsigned long ReadCloudCur;
+volatile unsigned long UltrasonicStart;
+// Count Variables
+int autolock_count = 0;
+int upload_count = 0;
+int sleep_count = 0;
+volatile int toneCycle_count = 0;
+// Timer Variables
+volatile bool enableTimer1ISR;
 
 
 void setup() {
   Serial.begin(115200);
 
-  //  Serial1.begin(ESP_BAUDRATE);
-  //
-  //  // Initialize ESP8266 module
-  //  WiFi.init(&Serial1);
-  //
-  //  // Connect to WiFi network
-  //  while (WiFi.status() != WL_CONNECTED) {
-  //    Serial.print("Attempting to connect to SSID: ");
-  //    Serial.println(ssid);
-  //    WiFi.begin(ssid, pass);
-  //    delay(5000);
-  //  }
-  //  Serial.println("Connected to WiFi");
-  //
-  //  ThingSpeak.begin(client);  // Initialize ThingSpeak
+  Serial1.begin(ESP_BAUDRATE);
+
+  // Initialize ESP8266 module
+  WiFi.init(&Serial1);
+
+  // Connect to WiFi network
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, pass);
+    delay(5000);
+  }
+  Serial.println("Connected to WiFi");
+
+  ThingSpeak.begin(client);  // Initialize ThingSpeak
 
   pinMode(buzzer, OUTPUT);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT_PULLUP); // Sets the echoPin as an Input
-  //attachInterrupt(digitalPinToInterrupt(2), echo_ISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(echoPin), interruptLogic, CHANGE);
+
+
   pinMode(motorIN1Pin, OUTPUT);
   pinMode(motorIN2Pin, OUTPUT);
   pinMode(motorIN3Pin, OUTPUT);
   pinMode(motorIN4Pin, OUTPUT);
   motorState = 0;
+  //default in close state
 
   finger.begin(57600);
   if (finger.verifyPassword()) {
@@ -159,11 +207,20 @@ void setup() {
   pinMode(BLUE_LED_PIN, OUTPUT);
   Serial.println(F("Waiting for card or password..."));
   displayMessage("Waiting for card or password...");
+  TimerReset();
+  attachInterrupt(digitalPinToInterrupt(echoPin), ultrasonicInterrupt, CHANGE);
 
-  FingerTimerStart = millis();
-  CloudTimerStart = millis();
-  ModuleTimerStart = millis();
-  TimeCur = millis();
+  // Setup Timer 1
+  cli();                            // Disable interrupts
+  TCCR1A = 0;                       // Clear Timer 1 configuration
+  TCCR1B = 0;
+  TCNT1 = 0;                        // Reset Timer 1 counter
+  OCR1A = 7812;                    // Set Timer 1 compare value for 1 second interrupt
+  TCCR1B |= (1 << WGM12);           // Enable CTC mode
+  TCCR1B |= (1 << CS12) | (1 << CS10);  // Set prescaler to 1024
+  TIMSK1 |= (1 << OCIE1A);          // Enable compare match interrupt
+  sei();                            // Enable interrupts
+  enableTimer1ISR = false;           // Disable timer1 interrupt
 }
 
 
@@ -173,20 +230,40 @@ void loop() {
     CheckRFID();
     CheckKeypad();
     CheckFingerprint();
+    CheckCloud();
   }
   ultrasonicSensor();
-  display_and_upload_All();
-  if (enableLock && (distance > lowestDistanceBound) && (distance < uppestDistanceBound))
-    doorClose();
-  else if (distance > uppestDistanceBound)
-    enableLock = true;
+  display_and_upload();
+  if (enableLock && (distance > lowestDistanceBound) && (distance < uppestDistanceBound)) {
+    autolock_count++;
+    if (autolock_count >= (DoorClosePeriod / (1 + 9 * door_hasOpened))) { //avoid false trigger
+      doorClose();
+      autolock_count = 0;
+    }
+  }
+  else if (door_opened && (distance > uppestDistanceBound)) {
+    autolock_count = 0;
+    //    enableLock = true;
+    door_hasOpened = 1;
+  }
   alarmsystem();
-  delay(10);
+  delay(50);
+}
+
+void TimerReset() {
+  FingerTimerStart = millis();
+  CloudTimerStart = millis();
+  ModuleTimerStart = millis();
+  TimeCur = millis();
+  ReadCloudStart = millis();
+  UltrasonicStart = millis();
 }
 
 void CheckFingerprint() {
+  if (door_opened)
+    return;
   TimeCur = millis();
-  if ((TimeCur - FingerTimerStart) > 500) {
+  if ((TimeCur - FingerTimerStart) > FingerCheckPeriod) {
     FingerTimerStart = millis();
     finger_status = getFingerprintIDez();
     if (finger_status != -1 and finger_status != -2) {
@@ -195,9 +272,9 @@ void CheckFingerprint() {
       doorOpen();
     } else {
       if (finger_status == -2) {
-        setColor(255, 0, 0);  // Red
-        delay(1000);  // Keep the LED on for 1 second
-        setColor(0, 0, 0);  // Turn off LED
+        toneCycle_count = 1; // set Buzzer & LED run once
+        tone_cur = tone_wrong; // set Buzzer & LED properties
+        enableBuzzer(); // start Buzzer & LED
       }
     }
   }
@@ -206,15 +283,11 @@ void CheckFingerprint() {
 // returns -1 if failed, otherwise returns ID #
 int getFingerprintIDez() {
   uint8_t p = finger.getImage();
-  if (p != 2) {
-    Serial.println(p);
-  }
+
   if (p != FINGERPRINT_OK)  return -1;
 
   p = finger.image2Tz();
-  if (p != 2) {
-    Serial.println('.');
-  }
+
   if (p != FINGERPRINT_OK)  return -1;
 
   p = finger.fingerFastSearch();
@@ -227,21 +300,33 @@ int getFingerprintIDez() {
 }
 
 void CheckKeypad() {
+  if (door_opened)
+    return;
   TimeCur = millis();
   keyRead = keypad.getKey();
   if (keyRead) {
+    //reset sleep count
+    sleep_count = 0;
+    tone(buzzer, tone_type); // 1000 == Send 1KHz sound signal
+    //    display.print("*");
+    //    display.display();
     if (keyRead == '*') {
       PasswordState = false;
       Serial.println(F("\nClear!"));
       displayMessage("\nClear!");
       password = "";
+      masked_password = "";
+      delay(100);        // for 0.1 sec
+      noTone(buzzer);
       return;
     }
     PasswordState = true;
     PasswordTimerStart = millis();
     password += keyRead;
+    masked_password += '*';
     Serial.print(keyRead);
-
+    delay(100);        // for 0.1 sec
+    noTone(buzzer);
     if (password.length() == 8) {
       if (password == correctPassword) {
         Serial.println(F("\nCorrect Password!"));
@@ -252,21 +337,28 @@ void CheckKeypad() {
         Serial.println(F("\nWrong Password!"));
         displayMessage("Wrong Password!");
         password = "";  // Reset the password string
-        setColor(255, 0, 0);  // Red
-        delay(1000);  // Keep the LED on for 1 second
-        setColor(0, 0, 0);  // Turn off LED
+        masked_password = "";
+
+
+        toneCycle_count = 3; // set Buzzer & LED run time
+        tone_cur = tone_wrong; // set Buzzer & LED properties
+        enableBuzzer(); // start Buzzer & LED
+        delay(2000);
       }
     }
-  } else if (((TimeCur - PasswordTimerStart) >= 10000) && PasswordState) {
+  } else if (((TimeCur - PasswordTimerStart) >= KeypadTimeoutPeriod) && PasswordState) {
     PasswordState = false;
     Serial.println(F("\nTime out!"));
     Serial.println(F("\nPlease input password again!"));
     displayMessage("Time out!\nPlease input password again!");
     password = "";
+    masked_password = "";
   }
 }
 
 void CheckRFID() {
+  if (door_opened)
+    return;
   if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
     if (isUIDMatch(rfid.uid.uidByte, storedUID, sizeof(storedUID) / sizeof(storedUID[0]))) {
       Serial.println("Correct Card!");
@@ -276,16 +368,42 @@ void CheckRFID() {
     else {
       Serial.println("Wrong Card!");
       displayMessage("Wrong Card!");
-      setColor(255, 0, 0);  // Red
-      delay(1000);  // Keep the LED on for 1 second
-      setColor(0, 0, 0);  // Turn off LED
+      toneCycle_count = 3; // set Buzzer & LED run time
+      tone_cur = tone_wrong; // set Buzzer & LED properties
+      enableBuzzer(); // start Buzzer & LED
     }
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
   }
 }
 
-bool isUIDMatch(byte *a, byte storedUID[][4], int numUIDs) {
+void CheckCloud() {
+  if ((door_opened) || PasswordState)
+    return;
+  ReadCloudCur = millis();
+  if (ReadCloudCur - ReadCloudStart >= CloudReadPeriod) {
+    ReadCloudStart = millis();
+    statusCode = ThingSpeak.readMultipleFields(myChannelNumber);
+    int open_request = ThingSpeak.readIntField(myChannelNumber, 6, myReadAPIKey);
+    String createdAt = ThingSpeak.getCreatedAt();
+    if (ThingSpeak.getLastReadStatus() == 200) { // Check if the read was successful
+      Serial.print("Latest Value in Field 6: ");
+      Serial.println(open_request);
+    } else {
+      Serial.println("Failed to read from ThingSpeak");
+    }
+    Serial.print("Time consume: ");
+    Serial.println(millis() - ReadCloudCur);
+    if (open_request == 1) {
+      ThingSpeak.setField(6, 0);
+      doorOpen();
+
+    }
+
+  }
+}
+
+bool isUIDMatch(byte * a, byte storedUID[][4], int numUIDs) {
   for (int i = 0; i < numUIDs; i++) {
     bool match = true;
     for (byte j = 0; j < 4; j++) {
@@ -315,46 +433,6 @@ void displayMessage(const char* msg) {
   display.display();
 }
 
-void display_and_upload_All() {
-
-  TimeCur = millis();
-  if ((TimeCur - ModuleTimerStart) > 2000) {
-    int chk = DHT.read11(DHT11_PIN);
-    LightValue = analogRead(LightsensorPin);
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.print("Humidity:    ");
-    display.println(DHT.humidity, 1);
-    display.print("Temperature: ");
-    display.println(DHT.temperature, 1);
-    display.print("Light:       ");
-    display.println(LightValue);
-    display.print("Distance:    ");
-    display.println(distance);
-    display.display();
-    int humidity_value = int(DHT.humidity);
-    int temperature_value = int(DHT.temperature);
-
-    ModuleTimerStart = millis();
-  }
-  //  TimeCur = millis();
-  //  if ((TimeCur - CloudTimerStart >= 20000) && (alarmWarning == false)) {
-  //    ThingSpeak.setField(1, humidity_value);
-  //    ThingSpeak.setField(2, temperature_value);
-  //    ThingSpeak.setField(3, LightValue);
-  //    ThingSpeak.setField(4, distance);
-  //    if (door_opened)
-  //      ThingSpeak.setField(5, 1);
-  //    else
-  //      ThingSpeak.setField(5, 0);
-  //    int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-  //    Serial.print("Upload Result: ");
-  //    Serial.println(result);  // Print result for debugging
-  //    CloudTimerStart = millis();
-  //  }
-}
 
 // Angle: 0-360, Direction: 0(anticlock), 1(clockwise), Speed: 0-100
 void MotorRun(int angle, int dirct, int speed) {
@@ -377,8 +455,9 @@ void MotorRun(int angle, int dirct, int speed) {
       MotorIN(0, 0, 0, 0);
     }
     motorState = 2; //state motor stop in open state
-    mD1 = 0; mD2 = 0; mD3 = 0; mD4 = 0;
+
   } else {
+    setColor(0, 255, 0);  // Turn Blue
     while (runTimes--) {
       switch (step) {
         case 0: mD1 = 0; mD2 = 0; mD3 = 1; mD4 = 1; break;
@@ -394,8 +473,10 @@ void MotorRun(int angle, int dirct, int speed) {
       MotorIN(0, 0, 0, 0);
     }
     motorState = 0; //state motor stop in close state
-    mD1 = 0; mD2 = 0; mD3 = 0; mD4 = 0;
+    setColor(0, 0, 0);  // Clear
   }
+  mD1 = 0; mD2 = 0; mD3 = 0; mD4 = 0;
+
 }
 
 // Send signals to motor
@@ -407,60 +488,71 @@ void MotorIN(int D1, int D2, int D3, int D4) {
 }
 
 
-
-void simpleUltrasonic() {
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH);
-  // Calculating the distance
-  distance = duration * 0.034 / 2;
-}
-
 void doorClose() {
-  setColor(0, 0, 0);  // Turn off LED
+
   MotorRun(90, 1, 100); // Automatic door locking
   door_opened = false;
+  door_hasOpened = 0;
   enableLock = false;
   Serial.println("Locked");
-  tone(buzzer, 7500); // 1000 == Send 1KHz sound signal
-  delay(500);        // for 0.5 sec
-  noTone(buzzer);
+  toneCycle_count = 1; // set Buzzer & LED run once
+  tone_cur = tone_wrong; // set Buzzer & LED properties
+  enableBuzzer(); // start Buzzer & LED
+  ThingSpeak.setField(5, 0);
+  int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  Serial.print("Upload Result: ");
+  Serial.println(result);  // Print result for debugging
+  TimerReset();
 }
 void doorOpen() {
-          password = "";  // Reset the password string
-          PasswordState = false;
+  password = "";  // Reset the password string
+  masked_password = "";
+  PasswordState = false;
+  //reset sleep count
+  sleep_count = 0;
+
   setColor(0, 255, 0);  // Green
+
   MotorRun(90, 0, 100); // Turn anticlockwise 90 degrees
   door_opened = true;
-  enableLock = false;
+  //enableLock = false;
   Serial.println("Opened");
+  toneCycle_count = 1; // set Buzzer & LED run once
+  tone_cur = tone_correct; // set Buzzer & LED properties
+  enableBuzzer(); // start Buzzer & LED
+  ThingSpeak.setField(5, 1);
+  int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  Serial.print("Upload Result: ");
+  Serial.println(result);  // Print result for debugging
+  enableLock = true;
+  TimerReset();
 }
 
 void alarmsystem() {
   if ((not door_opened) && ((distance >= uppestDistanceBound) || (LightValue > LightWarningBound))) {
     alarmWarning = true;
-    tone(buzzer, 7500); // 1000 == Send 1KHz sound signal
-    setColor(255, 0, 0);  // Red
-    delay(500);        // for 0.5 sec
-    noTone(buzzer);
-    setColor(0, 0, 0);  // Turn off LED
-    if (motorState == 0) {
-      MotorRun(90, 0, 100); // Turn anticlockwise 90 degrees
-      enableLock = true;
+    //reset sleep count
+    sleep_count = 0;
+    if (tone_cur == 0) {
+      toneCycle_count = 999; // set Buzzer & LED run once
+      tone_cur = tone_wrong; // set Buzzer & LED properties
+      enableBuzzer(); // start Buzzer & LED
     }
-    else
-      delay(500);
   }
-  else alarmWarning = false;
+  else {
+    alarmWarning = false;
+    // disableBuzzer();
+    toneCycle_count = 0;
+  }
 }
-
+//UltrasonicCheckPeriod
 void ultrasonicSensor() {
-  sendPulse();
-  d_flag = 1;
+  if (millis() - UltrasonicStart >= UltrasonicCheckPeriod) {
+    UltrasonicStart = millis();
+    sendPulse();
+    d_flag = 1;
+  }
 }
-
 void calculateDistance() {
   duration = TimeCur - startTime;
   // Calculating the distance
@@ -481,7 +573,7 @@ void sendPulse() {
   digitalWrite(trigPin, LOW);
 }
 
-void interruptLogic() {
+void ultrasonicInterrupt() {
   if (true && (motorState != 1)) {
     if (d_flag == 1) {
       startTime = micros();
@@ -491,6 +583,123 @@ void interruptLogic() {
       TimeCur = micros();
       calculateDistance();
     }
+  }
+}
 
+//void uploadALL() {
+//  while (result != 200) {
+//    int chk = DHT.read11(DHT11_PIN);
+//    int humidity_value = int(DHT.humidity);
+//    int temperature_value = int(DHT.temperature);
+//    LightValue = analogRead(LightsensorPin);
+//    ThingSpeak.setField(1, humidity_value);
+//    ThingSpeak.setField(2, temperature_value);
+//    ThingSpeak.setField(3, LightValue);
+//    ThingSpeak.setField(4, distance);
+//    if (door_opened)
+//      ThingSpeak.setField(5, 1);
+//    else
+//      ThingSpeak.setField(5, 0);
+//    int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+//    Serial.print("Upload Result: ");
+//    Serial.println(result);  // Print result for debugging
+//  }
+//}
+
+void display_and_upload() {
+
+  TimeCur = millis();
+  if ((TimeCur - ModuleTimerStart) > LedScreenUpdatePeriod) {
+    int chk = DHT.read11(DHT11_PIN);
+    LightValue = analogRead(LightsensorPin);
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.print("Humidity:    ");
+    display.println(DHT.humidity, 1);
+    display.print("Temperature: ");
+    display.println(DHT.temperature, 1);
+    display.print("Light:       ");
+    display.println(LightValue);
+    display.print("Distance:    ");
+    display.println(distance);
+    display.print("Door locked:    ");
+    display.println(door_opened);
+    display.print("Password:  ");
+    display.print(masked_password);
+    display.println();
+    display.display();
+    ModuleTimerStart = millis();
+  }
+  TimeCur = millis();
+  if ((TimeCur - CloudTimerStart >= CloudWritePeriod) && (alarmWarning == false) && (!PasswordState)) {
+    int humidity_value = int(DHT.humidity);
+    int temperature_value = int(DHT.temperature);
+    if (upload_count == 0) {
+      ThingSpeak.setField(1, humidity_value);
+    }
+    if (upload_count == 1) {
+      ThingSpeak.setField(2, temperature_value);
+    }
+    if (upload_count == 2) {
+      ThingSpeak.setField(3, LightValue);
+    }
+    if (upload_count == 3) {
+      ThingSpeak.setField(4, distance);
+      upload_count = -1;
+    }
+    int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    Serial.print("Upload Result: ");
+    Serial.println(result);  // Print result for debugging
+    Serial.print("Time consume: ");
+    Serial.println(millis() - TimeCur);
+    CloudTimerStart = millis();
+    upload_count++;
+  }
+}
+
+void enableBuzzer() {
+  TCNT1 = 0;
+  TIMSK1 |= (1 << OCIE1A);          // Enable timer interrupt
+}
+
+void disableBuzzer() {
+  noTone(buzzer);     // Turn off the buzzer
+  tone_cur = 0;
+
+  TIMSK1 &= ~(1 << OCIE1A);         // Disable timer interrupt
+}
+
+// Timer1 ISR
+ISR(TIMER1_COMPA_vect) {
+  if ((toneCycle_count % 2 == 1) && (toneCycle_count >= 0)) {
+    tone(buzzer, tone_cur);
+    switch (tone_cur) {
+      case tone_correct:
+        break;
+      case tone_wrong:
+        setColor(255, 0, 0);  // Red
+        break;
+      default:
+        setColor(0, 0, 0);  // Clear
+        break;
+    }
+    toneCycle_count --;
+  } else {
+    noTone(buzzer);
+    switch (tone_cur) {
+      case tone_correct:
+        break;
+      case tone_wrong:
+        setColor(0, 0, 0);  //
+        break;
+      default:
+        setColor(0, 0, 0);  // Clear
+        break;
+    }
+    toneCycle_count --;
+    if (toneCycle_count < 0)
+      disableBuzzer();
   }
 }
