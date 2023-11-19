@@ -1,0 +1,55 @@
+/* QR Code Container */
+.qr-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border-radius: 10px;
+    margin: 20px auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 300px;
+}
+
+/* QR Code Title */
+.qr-title {
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+/* QR Code Image */
+.qr-code img {
+    width: 100%;
+    height: auto;
+    padding: 10px; /* White border around QR code for contrast */
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+/* QR Code Description */
+.qr-description {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: #666;
+}
+/* Scanned Data Container */
+.scanned-data-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #eef2f7;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+/* Scanned Data Title */
+.scanned-data-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Scanned Data Content */
+.scanned-data-content {
+    font-size: 1em;
+    word-break: break-word; 
+}

@@ -1,0 +1,55 @@
+.calendar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; 
+    width: 1200px; 
+    margin: 0 auto; 
+}
+
+.month {
+    width: 150px; 
+    border: 1px solid #ccc;
+    margin: 5px; 
+    padding: 5px;
+}
+
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.day, .day-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 23px;
+    border: 1px solid #eee;
+    font-size: 0.6rem;
+}
+
+@media (max-width: 768px) {
+    .calendar {
+        width: auto; 
+        flex-direction: column; 
+    }
+
+    .month {
+        width: auto; 
+        margin: 10px 0; 
+    }
+
+    .day, .day-header {
+        height: 25px;
+        font-size: 0.7rem;
+    }
+}
+
+.rental-start {
+    background-color: lightgreen;
+    color: black;
+}
+
+.rental-end {
+    background-color: tomato;
+    color: white;
+}

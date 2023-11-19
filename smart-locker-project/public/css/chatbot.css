@@ -1,0 +1,43 @@
+.chatbot-container {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 300px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    
+}
+
+.chatbot-messages {
+    height: 200px;
+    overflow-y: auto;
+    color: black;
+    margin-bottom: 10px;
+}
+
+#chatbotButton {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.round-button {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+    text-align: center;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    order: -1; /* Position it first in the flex container */
+    margin-right: auto; /* Push all other elements to the right */
+}
+.round-button:hover {
+    background-color: #45a049;
+}

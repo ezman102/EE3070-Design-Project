@@ -1,0 +1,31 @@
+.sidebar {
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    width: 220px;
+    height: 100%;
+    overflow: auto;
+}
+.sidebar a {
+    padding: 10px 15px;
+    text-decoration: none;
+    font-size: 18px;
+    color: white;
+    display: block;
+}
+.sidebar a:hover {
+    background-color: #575757;
+}
+
+.logout-button {
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    color: #fff; /* Change as per your color scheme */
+    background-color: #f44336; /* Change as per your color scheme */
+    text-align: center;
+    margin-top: 20px; /* Adjust spacing */
+    border-radius: 5px; /* Optional for rounded corners */
+}
+
+

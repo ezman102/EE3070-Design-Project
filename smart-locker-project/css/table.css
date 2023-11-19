@@ -1,0 +1,21 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
+.suspicious {
+    background-color: #ffcccc; /* Light red background */
+}
+
+table tr.suspicious td {
+    color: #ff0000; /* Red text color */
+}
