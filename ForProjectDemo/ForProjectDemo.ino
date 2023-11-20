@@ -592,6 +592,7 @@ void calculateDistance() {
   d_flag = 0;
 }
 
+
 void sendPulse() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
