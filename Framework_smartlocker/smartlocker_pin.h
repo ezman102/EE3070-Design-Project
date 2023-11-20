@@ -24,5 +24,4 @@
 SoftwareSerial mySerial(10, 11); // TX/RX on fingerprint sensor
 // Keypad
 byte pin_rows[4] = {13, 12, 9, 8};
-byte pin_column[4] = {7, 6, 5, 3};
-#define keypadIntPin 3
+byte pin_column[4] = {7, 6, 5, 4};
