@@ -1,7 +1,7 @@
 // Password
 // Wifi password
-char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1  TP-Link_002C
-char pass[] = "EE3070P1615";     //EE3070P1615  20678203
+char ssid[] = "EE3070_P1615_1";   //EE3070_P1615_1
+char pass[] = "EE3070P1615";     //EE3070P1615
 // RFID password
 byte storedUID[2][4] = {
   {0xF1, 0x3C, 0x82, 0x19},
@@ -22,8 +22,8 @@ int uploadDebug = false;
 
 //Setting
 // Ultrasonic Setting
-float uppestDistanceBound = 5; // larger than 5cm = the door opened
-float lowestDistanceBound = 2.5;// smaller than 2.5cm = sensor error
+float uppestDistanceBound = 3.5; // larger than 3.9cm = the door opened
+float lowestDistanceBound = 2.8;// smaller than 3cm = sensor error
 
 // OLED Setting
 #define SCREEN_WIDTH 128
@@ -79,15 +79,15 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 MFRC522::MIFARE_Key key;
 
 // Waiting Period Setting
-const unsigned long UltrasonicCheckPeriod = 500;
+const unsigned long UltrasonicCheckPeriod = 90;
 const unsigned long FingerCheckPeriod = 500;
-const unsigned long CloudWritePeriod = 100000;
+const unsigned long CloudWritePeriod = 90000;
 const unsigned long CloudReadPeriod = 15000;
 const unsigned long KeypadTimeoutPeriod = 10000;
 const unsigned long LedScreenUpdatePeriod = 2000;
-const unsigned long DoorClosePeriod = 200;
+const unsigned long DoorClosePeriod = 80;
 const unsigned long SleepPeriod = 20;
-const unsigned long SleepEnablePeriod = 200;
+const unsigned long SleepEnablePeriod = 3000;
 //Variables
 // Ultrasonic distance sensor Variables
 volatile long duration;
