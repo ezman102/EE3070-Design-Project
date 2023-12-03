@@ -74,7 +74,7 @@ void setup() {
   Serial.println(F("Waiting for card or password..."));
   displayMessage("Waiting for card or password...");
   TimerReset();
-  attachInterrupt(digitalPinToInterrupt(echoPin), ultrasonicInterrupt, CHANGE);
+  //attachInterrupt(digitalPinToInterrupt(echoPin), ultrasonicInterrupt, CHANGE);
 
   // Setup Timer 1
   cli();                            // Disable interrupts
@@ -103,10 +103,12 @@ void loop() {
     sleep_count ++;
   }
   ultrasonicSensor();
+
+
   display_and_upload();
   if (enableLock && (distance > lowestDistanceBound) && (distance < uppestDistanceBound)) {
     autolock_count++;
-    if (autolock_count >= (DoorClosePeriod / (1 + 9 * door_hasOpened))) { //avoid false trigger
+    if (autolock_count >= (DoorClosePeriod / (1 + 4 * door_hasOpened))) { //avoid false trigger
       doorClose();
       autolock_count = 0;
     }
@@ -132,6 +134,9 @@ void loop() {
   } else  enableSleep = false;
 
   delay(50);
+
+  //      MotorRun(90, 0, 100);
+  //      delay(999999);
 }
 
 void TimerReset() {
@@ -327,6 +332,7 @@ void MotorRun(int angle, int dirct, int speed) {
   int step = 0;
   int runTimes = 5.688 * angle;
   if (dirct == 0) {
+    setColor(0, 255, 0);  // Turn Blue
     while (runTimes--) {
       switch (step) {
         case 0: mD1 = 1; mD2 = 1; mD3 = 0; mD4 = 0; break;
@@ -341,10 +347,9 @@ void MotorRun(int angle, int dirct, int speed) {
       delay(104 - speed);
       MotorIN(0, 0, 0, 0);
     }
-    motorState = 2; //state motor stop in open state
-
+    motorState = 0; //state motor stop in close state
+    setColor(0, 0, 0);  // Clear
   } else {
-    setColor(0, 255, 0);  // Turn Blue
     while (runTimes--) {
       switch (step) {
         case 0: mD1 = 0; mD2 = 0; mD3 = 1; mD4 = 1; break;
@@ -359,8 +364,7 @@ void MotorRun(int angle, int dirct, int speed) {
       delay(104 - speed);
       MotorIN(0, 0, 0, 0);
     }
-    motorState = 0; //state motor stop in close state
-    setColor(0, 0, 0);  // Clear
+    motorState = 2; //state motor stop in open state
   }
   mD1 = 0; mD2 = 0; mD3 = 0; mD4 = 0;
 
@@ -377,7 +381,7 @@ void MotorIN(int D1, int D2, int D3, int D4) {
 
 void doorClose() {
 
-  MotorRun(90, 1, 100); // Automatic door locking
+  MotorRun(90, 0, 100); // Automatic door locking
   door_opened = false;
   door_hasOpened = 0;
   enableLock = false;
@@ -402,7 +406,7 @@ void doorOpen() {
 
   setColor(0, 255, 0);  // Green
 
-  MotorRun(90, 0, 100); // Turn anticlockwise 90 degrees
+  MotorRun(90, 1, 100); // Turn anticlockwise 90 degrees
   door_opened = true;
   //enableLock = false;
   Serial.println("Opened");
@@ -418,7 +422,7 @@ void doorOpen() {
 }
 
 void alarmsystem() {
-  if ((not door_opened) && ((distance >= uppestDistanceBound) || (LightValue > LightWarningBound))) {
+  if ((not door_opened) && ((distance >= (uppestDistanceBound + 0.5)))) {
     alarmWarning = true;
     //reset sleep count
     sleep_count = 0;
@@ -438,10 +442,31 @@ void alarmsystem() {
 void ultrasonicSensor() {
   if (millis() - UltrasonicStart >= UltrasonicCheckPeriod) {
     UltrasonicStart = millis();
-    sendPulse();
-    d_flag = 1;
+//    sendPulse();
+//    d_flag = 1;
+    distance = measureDistance(); 
   }
 }
+
+float measureDistance() {
+  // Clear the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  // Set the trigPin on HIGH state for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Read the echoPin, returns the sound wave travel time in microseconds
+  long duration = pulseIn(echoPin, HIGH);
+
+  // Calculate the distance in centimeters
+  float distance = duration * 0.034 / 2;
+
+  return distance;
+}
+
 void calculateDistance() {
   duration = TimeCur - startTime;
   // Calculating the distance
@@ -496,11 +521,10 @@ void ultrasonicInterrupt() {
 //}
 
 void display_and_upload() {
-
   TimeCur = millis();
   if ((TimeCur - ModuleTimerStart) > LedScreenUpdatePeriod) {
     int chk = DHT.read11(DHT11_PIN);
-    LightValue = analogRead(LightsensorPin);
+    // LightValue = analogRead(LightsensorPin);
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
@@ -509,8 +533,8 @@ void display_and_upload() {
     display.println(DHT.humidity, 1);
     display.print("Temperature: ");
     display.println(DHT.temperature, 1);
-    display.print("Light:       ");
-    display.println(LightValue);
+    //display.print("Light:       ");
+    //display.println(LightValue);
     display.print("Distance:    ");
     display.println(distance);
     display.print("Door locked:    ");
@@ -525,19 +549,19 @@ void display_and_upload() {
   if ((TimeCur - CloudTimerStart >= CloudWritePeriod) && (alarmWarning == false) && (!PasswordState)) {
     int humidity_value = int(DHT.humidity);
     int temperature_value = int(DHT.temperature);
-    if (upload_count == 0) {
-      ThingSpeak.setField(1, humidity_value);
-    }
-    if (upload_count == 1) {
-      ThingSpeak.setField(2, temperature_value);
-    }
-    if (upload_count == 2) {
-      ThingSpeak.setField(3, LightValue);
-    }
-    if (upload_count == 3) {
-      ThingSpeak.setField(4, distance);
-      upload_count = -1;
-    }
+    //    if (upload_count == 0) {
+    //      ThingSpeak.setField(1, humidity_value);
+    //    }
+    //    if (upload_count == 1) {
+    //      ThingSpeak.setField(2, temperature_value);
+    //    }
+    //    if (upload_count == 2) {
+    //      ThingSpeak.setField(4, distance);
+    //      upload_count = -1;
+    //    }
+    ThingSpeak.setField(1, humidity_value);
+    ThingSpeak.setField(2, temperature_value);
+    ThingSpeak.setField(4, distance);
     int result = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
     Serial.print("Upload Result: ");
     Serial.println(result);  // Print result for debugging
@@ -556,7 +580,7 @@ void enableBuzzer() {
 void disableBuzzer() {
   noTone(buzzer);     // Turn off the buzzer
   tone_cur = 0;
-
+  toneCycle_count = 0;
   TIMSK1 &= ~(1 << OCIE1A);         // Disable timer interrupt
 }
 //
@@ -612,10 +636,10 @@ void enterSleepMode()
   Serial.println("sleep");
   // Configure the watchdog timer
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-   MCUSR &= ~(1 << WDRF);  // Clear the Watchdog System Reset Flag
+  MCUSR &= ~(1 << WDRF);  // Clear the Watchdog System Reset Flag
   WDTCSR |= (1 << WDCE) | (1 << WDE);  // Enable Watchdog Timer Configuration
   WDTCSR = (1 << WDP2) | (1 << WDP1) | (1 << WDP0);  // Set Watchdog Timer Prescaler to 4 seconds
-  WDTCSR |= _BV(WDIE); 
+  WDTCSR |= _BV(WDIE);
   delay(1);
   // Enter power-down sleep mode
   sleep_mode();
