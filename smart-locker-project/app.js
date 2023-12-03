@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 const app = express();
 const path = require('path');
 const fs = require('fs');
@@ -6,6 +7,14 @@ const https = require('https');
 const bcrypt = require('bcrypt');
 const { MongoClient } = require('mongodb');
 var nodemailer = require('nodemailer');
+const { ObjectId } = require('mongodb');
+
+app.use(session({
+  secret: 'Very Complex String secret key', // will change when production use
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }  // using https
+}));
 
 const port = 3000;
 
@@ -61,31 +70,95 @@ const port = 3000;
     const password = req.body.password;
 
     try {
-      const user = await db.collection('users').findOne({
-        $or: [{ username: userInput }, { email: userInput }]
-      });
+        const user = await db.collection('users').findOne({
+            $or: [{ username: userInput }, { email: userInput }]
+        });
 
-      if (!user) {
-        return res.send('User not found');
-      }
+        if (!user) {
+            return res.send('User not found');
+        }
 
-      // Using bcrypt to compare the password
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.send('Invalid password');
-      }
+        // Using bcrypt to compare the password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.send('Invalid password');
+        }
 
-      res.render('home', { displayName: user.username, lockerNumber: user.lockerNumber, userRole: user.role, password: user.password });
+        // Store user data in session
+        req.session.userId = user._id;
+        req.session.userRole = user.role;
+        req.session.displayName = user.username;
+        req.session.lockerNumber = user.lockerNumber;
+
+        // Render home page
+        res.render('home', { 
+            displayName: user.username, 
+            lockerNumber: user.lockerNumber, 
+            userRole: user.role 
+        });
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).send('Internal Server Error');
+        console.error('Login error:', error);
+        res.status(500).send('Internal Server Error');
     }
-  });
+});
+
 
   app.get('/home', (req, res) => {
     const userRole = req.session.userRole;
-    res.render('home', { userRole: userRole });
-  });
+    const password = req.session.password; 
+    res.render('home', { userRole: userRole, password: password });
+});
+
+app.post('/verifyKeypadInput', async (req, res) => {
+  const inputCode = req.body.inputCode;
+  const userId = req.session.userId; 
+
+  console.log("Input Code:", inputCode);
+  console.log("User ID from session:", userId);
+
+  // Ensure that userId is converted to ObjectId before querying
+  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+
+  if (!user) {
+      console.log('User not found for ID:', userId);
+      return res.status(404).json({ message: 'User not found' });
+  }
+
+  console.log("User's stored hashed password:", user.password);
+
+  // Use bcrypt to compare the input code with the hashed password
+  const isCorrect = await bcrypt.compare(inputCode, user.password); 
+
+  console.log("Password match result:", isCorrect);
+
+  if (isCorrect) {
+    try {
+        // Update ThingSpeak channel
+        const apiKey = "B66AQC1B5H7758EU"; 
+        const fieldToUpdate = 6;
+        const updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}&field${fieldToUpdate}=1`;
+
+        const response = await fetch(updateURL);
+        const data = await response.text();
+
+        if (data > 0) {
+            console.log('ThingSpeak update successful. Entry number: ' + data);
+            // Reset the field after 15 seconds
+            setTimeout(() => {
+                fetch(`https://api.thingspeak.com/update?api_key=${apiKey}&field${fieldToUpdate}=0`);
+            }, 15000);
+        } else {
+            console.log('ThingSpeak update failed.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+
+    res.json({ isCorrect: true });
+} else {
+      res.json({ isCorrect: false });
+  }
+});
 
   const saltRounds = 10;
 
@@ -115,7 +188,7 @@ const port = 3000;
     // Authenticate the guard
 
     const apiKey = "B66AQC1B5H7758EU";
-    const fieldToUpdate = 5; // Adjust based on your setup
+    const fieldToUpdate = 5; 
     const updateURL = `https://api.thingspeak.com/update?api_key=${apiKey}&field${fieldToUpdate}=1`;
 
     try {
@@ -205,8 +278,6 @@ const port = 3000;
         res.status(500).send('Error retrieving user information.');
     }
 });
-
-
 
   app.post('/updatePassword', async (req, res) => {
     console.log(req.body); // Log the request body to debug

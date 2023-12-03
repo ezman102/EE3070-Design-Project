@@ -35,7 +35,7 @@
     color: white;
     border: none;
     cursor: pointer;
-    order: -1; /* Position it first in the flex container */
+    order: 1; /* Position it first in the flex container */
     margin-right: auto; /* Push all other elements to the right */
 }
 .round-button:hover {

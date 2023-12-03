@@ -1,0 +1,45 @@
+[{
+  "_id": {
+    "$oid": "654f27f4295ec7aa2900dc20"
+  },
+  "username": "student",
+  "password": "$2b$10$gnZh6UlumK6qlkTMjtGFGOATMRNjbkkkHeXhr7ru3YiVm6Xykewnu",
+  "email": "yysin8-c@my.cityu.edu.hk",
+  "role": "student",
+  "lockerNumber": "001"
+},
+{
+  "_id": {
+    "$oid": "654f27f4295ec7aa2900dc21"
+  },
+  "username": "professor",
+  "password": "$2b$10$SsIqirJgAuA.5.neP8qG5uyjuO1p.EX1N4u52XEI15HEgU1p78BYe",
+  "email": "professor@my.cityu.edu.hk",
+  "role": "professor",
+  "lockerNumber": "002"
+},
+{
+  "_id": {
+    "$oid": "654f27f4295ec7aa2900dc22"
+  },
+  "username": "guard",
+  "password": "$2a$12$DTO8O6J2qF0mNzsnXzSlYObmkgRsuZOiK8znNEz5cncuZ7/xt2/w.",
+  "email": "guard@my.cityu.edu.hk",
+  "role": "guard",
+  "lockerNumber": "003"
+},
+{
+  "_id": {
+    "$oid": "65530d52062a92d6cb1bbdc6"
+  },
+  "email": "yysin8@my.cityu.edu.hk",
+  "lockerNumber": "004",
+  "password": "$2a$12$jKaoH63pMX/TtM3JMtWv1u5utJMxWAGaM1ML/FnQA1v415khF1ONu",
+  "role": "student",
+  "username": "yysin8"
+},
+{
+  "_id": {
+    "$oid": "65531176062a92d6cb1bbdc7"
+  }
+}]

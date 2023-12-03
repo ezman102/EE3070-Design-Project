@@ -27,12 +27,15 @@ The SmartLocker Campus System is an innovative solution designed to manage and s
 - **Chart.js:** For dynamic data representation.
 - **QRCode.js:** To generate and read QR codes.
 - **Instascan.js:** For real-time camera scanning of QR codes.
-- **Node.js and Express.js:** Backend server development.
+- **Node.js and Express.js:** Backend server development. (Node.js Version 18.18.2)
 - **MongoDB:** Database for storing user and locker data.
 - **Nodemailer:** For sending automated emails.
 - **Bcrypt:** For secure password hashing.
 
+
 ## Installation and Setup
+
+Before you begin the installation process, ensure you have Node.js version 18.18.2 installed on your system. If you don't have this version, you can download it from the [Node.js website](https://nodejs.org/).
 
 1. **Clone the Repository:**
    ```
@@ -55,11 +58,17 @@ The SmartLocker Campus System is an innovative solution designed to manage and s
 
 5. **Start the Server:**
    ```
-   npm start
+   node app.js
    ```
 
 6. **Access the Application:**
    - Open a web browser and navigate to `https://localhost:3000`.
+
+---
+
+**Note:** Replace `[repository-url]` with the actual URL of the GitHub repository. Ensure that you have Node.js version 18.18.2 installed for optimal compatibility and performance. If you encounter any issues with a different version of Node.js, try switching to version 18.18.2.
+
+---
 
 ## Usage
 
